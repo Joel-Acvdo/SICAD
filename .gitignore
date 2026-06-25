@@ -44,3 +44,6 @@ desktop.ini
 
 # OneDrive
 *.tmp
+
+# Scripts locales de apoyo (no versionar)
+autor.ps1
