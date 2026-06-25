@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: sicad_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sicad}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sicad_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-sicad}
+    ports:
+      - "5432:5432"
+    volumes:
+      - sicad_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sicad}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: sicad_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sicad}:${POSTGRES_PASSWORD:-sicad_pass}@db:5432/${POSTGRES_DB:-sicad}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-cambia_este_secreto_en_produccion}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      PORT: 4000
+      NODE_ENV: ${NODE_ENV:-development}
+    ports:
+      - "4000:4000"
+    command: sh -c "npx prisma migrate deploy && npm run seed && npm start"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: sicad_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
+    ports:
+      - "3000:3000"
+
+volumes:
+  sicad_pgdata:

@@ -1,0 +1,160 @@
+// Esquema de base de datos SICAD
+// Modelo relacional basado en el Diagrama Entidad-Relación del proyecto.
+// Motor: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+//  ROL  (tiene → Usuario)
+// ─────────────────────────────────────────────
+model Rol {
+  id_rol      Int       @id @default(autoincrement())
+  nombre      String    @unique @db.VarChar(50)
+  descripcion String?   @db.VarChar(255)
+
+  usuarios    Usuario[]
+
+  @@map("rol")
+}
+
+// ─────────────────────────────────────────────
+//  USUARIO  (comunidad interna: alumnos y trabajadores)
+// ─────────────────────────────────────────────
+model Usuario {
+  id_usuario         Int            @id @default(autoincrement())
+  nombre             String         @db.VarChar(100)
+  apellidos          String         @db.VarChar(100)
+  correo             String         @unique @db.VarChar(150)
+  matricula_empleado String?        @unique @db.VarChar(50)
+  password_hash      String         @db.VarChar(255)
+  tipo               TipoUsuario
+  estatus            EstatusUsuario @default(ACTIVO)
+  fecha_registro     DateTime       @default(now())
+
+  id_rol Int
+  rol    Rol @relation(fields: [id_rol], references: [id_rol])
+
+  credenciales           Credencial[]
+  visitantes_registrados Visitante[]  @relation("UsuarioRegistro")
+
+  @@map("usuario")
+}
+
+enum TipoUsuario {
+  ALUMNO
+  TRABAJADOR
+  ADMINISTRATIVO
+  DOCENTE
+  SEGURIDAD
+}
+
+enum EstatusUsuario {
+  ACTIVO
+  INACTIVO
+  SUSPENDIDO
+}
+
+// ─────────────────────────────────────────────
+//  CREDENCIAL  (Usuario posee → Credencial; genera → Acceso)
+// ─────────────────────────────────────────────
+model Credencial {
+  id_credencial     Int              @id @default(autoincrement())
+  codigo_nfc        String           @unique @db.VarChar(255)
+  estado            EstadoCredencial @default(ACTIVA)
+  fecha_emision     DateTime         @default(now())
+  fecha_vencimiento DateTime
+
+  id_usuario Int
+  usuario    Usuario @relation(fields: [id_usuario], references: [id_usuario])
+
+  accesos Acceso[]
+
+  @@map("credencial")
+}
+
+enum EstadoCredencial {
+  ACTIVA
+  INACTIVA
+  VENCIDA
+  REVOCADA
+}
+
+// ─────────────────────────────────────────────
+//  VISITANTE  (Usuario registra → Visitante; genera → Acceso)
+// ─────────────────────────────────────────────
+model Visitante {
+  id_visitante   Int              @id @default(autoincrement())
+  nombre         String           @db.VarChar(150)
+  identificacion String           @db.VarChar(50)
+  empresa        String?          @db.VarChar(150)
+  motivo         String?          @db.VarChar(255)
+  fecha_inicio   DateTime
+  fecha_fin      DateTime
+  estatus        EstatusVisitante @default(VIGENTE)
+
+  id_usuario_registro Int
+  usuario_registro    Usuario @relation("UsuarioRegistro", fields: [id_usuario_registro], references: [id_usuario])
+
+  accesos Acceso[]
+
+  @@map("visitante")
+}
+
+enum EstatusVisitante {
+  VIGENTE
+  EXPIRADO
+  CANCELADO
+}
+
+// ─────────────────────────────────────────────
+//  PUNTO_ACCESO  (ocurre en → Acceso)
+// ─────────────────────────────────────────────
+model PuntoAcceso {
+  id_punto  Int     @id @default(autoincrement())
+  nombre    String  @db.VarChar(100)
+  ubicacion String? @db.VarChar(150)
+
+  accesos Acceso[]
+
+  @@map("punto_acceso")
+}
+
+// ─────────────────────────────────────────────
+//  ACCESO  (bitácora de eventos de entrada/salida)
+//  Un acceso lo genera una credencial (comunidad) O un visitante (externo).
+// ─────────────────────────────────────────────
+model Acceso {
+  id_acceso   Int             @id @default(autoincrement())
+  fecha_hora  DateTime        @default(now())
+  tipo_evento TipoEvento
+  resultado   ResultadoAcceso
+
+  id_credencial Int?
+  credencial    Credencial? @relation(fields: [id_credencial], references: [id_credencial])
+
+  id_visitante Int?
+  visitante    Visitante? @relation(fields: [id_visitante], references: [id_visitante])
+
+  id_punto Int
+  punto    PuntoAcceso @relation(fields: [id_punto], references: [id_punto])
+
+  @@index([fecha_hora])
+  @@map("acceso")
+}
+
+enum TipoEvento {
+  ENTRADA
+  SALIDA
+}
+
+enum ResultadoAcceso {
+  PERMITIDO
+  DENEGADO
+}
