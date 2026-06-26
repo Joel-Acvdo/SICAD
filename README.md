@@ -9,7 +9,7 @@ usuario y gestiona el ingreso temporal de visitantes/proveedores desde un portal
 
 ---
 
-## 🧱 Arquitectura
+## Arquitectura
 
 Monorepo con dos aplicaciones y una base de datos relacional:
 
@@ -40,7 +40,7 @@ SICAD/
 
 ---
 
-## 🚀 Puesta en marcha (desarrollo)
+## Puesta en marcha (desarrollo)
 
 ### Opción A — Todo con Docker (recomendada)
 
@@ -84,7 +84,7 @@ npm run dev
 
 ---
 
-## 🌿 Estrategia de ramas (Git)
+## Estrategia de ramas (Git)
 
 Trabajamos con **tres ramas** simulando un entorno laboral:
 
@@ -108,7 +108,7 @@ feature/* ──▶ dev ──▶ qa ──▶ main
 
 ---
 
-## 🧪 Pruebas
+## Pruebas
 
 ```bash
 cd backend
@@ -118,7 +118,7 @@ npm run test:watch
 
 ---
 
-## ⚙️ CI/CD
+## CI/CD
 
 - **`.github/workflows/ci.yml`** — en cada push/PR a `dev`, `qa` y `main`: instala
   dependencias, corre lint, ejecuta las pruebas de Jest y construye el frontend.
@@ -127,7 +127,7 @@ npm run test:watch
 
 ---
 
-## 👥 Equipo
+## Equipo
 
 | Integrante                   | Rol                                  |
 |------------------------------|--------------------------------------|
