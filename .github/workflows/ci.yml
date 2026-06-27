@@ -1,64 +1,75 @@
-name: CI - Build & Test
+name: CI - Build & Test            # Nombre del workflow; aparece en la pestaña Actions de GitHub
 
-# Se ejecuta en cada push o Pull Request a las ramas del flujo de trabajo.
-on:
-  push:
-    branches: [dev, qa, main]
-  pull_request:
-    branches: [dev, qa, main]
+# ---------------------------------------------------------------------------
+# Disparadores: definen CUÁNDO se ejecuta este workflow.
+# ---------------------------------------------------------------------------
+on:                                # Bloque de eventos que disparan el pipeline
+  push:                            # Evento 1: cuando se sube código (push)...
+    branches:                      # ...solo si el push va a estas ramas:
+      - dev                        # rama de desarrollo
+      - qa                         # rama de pruebas (QA)
+      - main                       # rama de producción
+  pull_request:                    # Evento 2: cuando se abre o actualiza un Pull Request...
+    branches:                      # ...dirigido a estas ramas:
+      - dev                        # PRs hacia desarrollo
+      - qa                         # PRs hacia QA
+      - main                       # PRs hacia producción
 
-jobs:
-  backend:
-    name: Backend (lint + pruebas)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./backend
-    steps:
-      - uses: actions/checkout@v4
+# ---------------------------------------------------------------------------
+# Trabajos: cada uno corre en su propia máquina virtual y en paralelo.
+# ---------------------------------------------------------------------------
+jobs:                              # Lista de trabajos del pipeline
+  backend:                         # Trabajo 1: pruebas del backend
+    name: Backend (lint + pruebas) # Nombre legible del trabajo en GitHub
+    runs-on: ubuntu-latest         # Sistema operativo de la máquina: Linux Ubuntu
+    defaults:                      # Valores por defecto para los pasos
+      run:                         # Aplican a los comandos de tipo 'run'
+        working-directory: ./backend   # Ejecuta todos los comandos dentro de /backend
+    steps:                         # Pasos del trabajo (se ejecutan en orden)
+      - uses: actions/checkout@v4  # Paso 1: descarga el código del repositorio a la máquina
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: backend/package-lock.json
+      - name: Configurar Node.js   # Paso 2: instala Node.js
+        uses: actions/setup-node@v4    # Acción oficial para configurar Node
+        with:                      # Parámetros que recibe la acción
+          node-version: 20         # Versión de Node.js a instalar
+          cache: npm               # Guarda en caché las dependencias de npm (acelera futuras corridas)
+          cache-dependency-path: backend/package-lock.json   # Archivo que identifica el caché
 
-      - name: Instalar dependencias
-        run: npm ci
+      - name: Instalar dependencias  # Paso 3: instala las librerías del backend
+        run: npm ci                # 'npm ci' instala las versiones EXACTAS del package-lock
 
-      - name: Generar cliente Prisma
-        run: npx prisma generate
+      - name: Generar cliente Prisma # Paso 4: genera el cliente de Prisma (ORM)
+        run: npx prisma generate   # Crea el código que el backend usa para hablar con la BD
 
-      - name: Ejecutar pruebas (Jest)
-        run: npm test
-        env:
-          JWT_SECRET: secreto_de_pruebas_ci
-          NODE_ENV: test
+      - name: Ejecutar pruebas (Jest)  # Paso 5: corre las pruebas automatizadas
+        run: npm test              # Ejecuta Jest; si una prueba falla, el trabajo se pone rojo
+        env:                       # Variables de entorno SOLO para este paso
+          JWT_SECRET: secreto_de_pruebas_ci   # Secreto de prueba para generar tokens JWT
+          NODE_ENV: test           # Indica a la app que corre en modo prueba
 
-  frontend:
-    name: Frontend (build)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
-    steps:
-      - uses: actions/checkout@v4
+  frontend:                        # Trabajo 2: build del frontend (corre en paralelo al backend)
+    name: Frontend (build)         # Nombre legible del trabajo
+    runs-on: ubuntu-latest         # Máquina Linux Ubuntu
+    defaults:                      # Valores por defecto
+      run:                         # Para los comandos 'run'
+        working-directory: ./frontend  # Ejecuta todo dentro de /frontend
+    steps:                         # Pasos del trabajo
+      - uses: actions/checkout@v4  # Paso 1: descarga el código
 
-      - name: Configurar Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+      - name: Configurar Node.js   # Paso 2: instala Node.js
+        uses: actions/setup-node@v4    # Acción oficial de Node
+        with:                      # Parámetros
+          node-version: 20         # Versión de Node.js
+          cache: npm               # Caché de dependencias
+          cache-dependency-path: frontend/package-lock.json  # Archivo del caché
 
-      - name: Instalar dependencias
-        run: npm ci
+      - name: Instalar dependencias  # Paso 3: instala librerías del frontend
+        run: npm ci                # Instalación limpia y exacta
 
-      - name: Lint
-        run: npm run lint
+      - name: Lint                 # Paso 4: revisa el estilo y la calidad del código
+        run: npm run lint          # Ejecuta ESLint; falla si hay errores de estilo
 
-      - name: Construir
-        run: npm run build
-        env:
-          NEXT_PUBLIC_API_URL: http://localhost:4000/api
+      - name: Construir            # Paso 5: compila el frontend de Next.js
+        run: npm run build         # Genera la versión de producción; falla si no compila
+        env:                       # Variables de entorno del paso
+          NEXT_PUBLIC_API_URL: http://localhost:4000/api   # URL de la API que usa el build
