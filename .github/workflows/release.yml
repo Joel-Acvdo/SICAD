@@ -1,51 +1,60 @@
-name: Release
+name: Release                      # Nombre del workflow; aparece en la pestaña Actions
 
-# Se dispara al crear un tag de versión, por ejemplo: git tag v1.0.0 && git push --tags
-on:
-  push:
-    tags:
-      - 'v*'
+# ---------------------------------------------------------------------------
+# Disparador: se ejecuta SOLO al crear un tag de versión.
+# Ejemplo para activarlo:  git tag v1.0.0 && git push --tags
+# ---------------------------------------------------------------------------
+on:                                # Bloque de eventos
+  push:                            # Cuando se hace push...
+    tags:                          # ...de etiquetas (tags), no de ramas
+      - 'v*'                       # solo tags que empiecen con 'v' (v1.0.0, v2.3.1, etc.)
 
-permissions:
-  contents: write   # necesario para crear el Release
+# ---------------------------------------------------------------------------
+# Permisos que necesita el workflow sobre el repositorio.
+# ---------------------------------------------------------------------------
+permissions:                       # Bloque de permisos
+  contents: write                  # Escritura: indispensable para poder crear el Release
 
-jobs:
-  build-images:
-    name: Construir imágenes Docker
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+# ---------------------------------------------------------------------------
+# Trabajos del pipeline de release.
+# ---------------------------------------------------------------------------
+jobs:                              # Lista de trabajos
+  build-images:                    # Trabajo 1: construir las imágenes Docker
+    name: Construir imágenes Docker  # Nombre legible del trabajo
+    runs-on: ubuntu-latest         # Máquina Linux Ubuntu
+    steps:                         # Pasos del trabajo
+      - uses: actions/checkout@v4  # Paso 1: descarga el código del repositorio
 
-      - name: Configurar Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Configurar Docker Buildx   # Paso 2: prepara Buildx (constructor moderno de Docker)
+        uses: docker/setup-buildx-action@v3   # Acción oficial de Docker
 
-      - name: Construir imagen del backend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          push: false
-          tags: sicad-backend:${{ github.ref_name }}
+      - name: Construir imagen del backend   # Paso 3: construye la imagen Docker del backend
+        uses: docker/build-push-action@v6     # Acción para construir/publicar imágenes
+        with:                      # Parámetros de la acción
+          context: ./backend       # Usa el Dockerfile que está en /backend
+          push: false              # Solo construye la imagen; NO la sube a un registro
+          tags: sicad-backend:${{ github.ref_name }}   # Etiqueta la imagen con el nombre del tag (ej. v1.0.0)
 
-      - name: Construir imagen del frontend
-        uses: docker/build-push-action@v6
-        with:
-          context: ./frontend
-          push: false
-          tags: sicad-frontend:${{ github.ref_name }}
+      - name: Construir imagen del frontend  # Paso 4: construye la imagen Docker del frontend
+        uses: docker/build-push-action@v6     # Misma acción de Docker
+        with:                      # Parámetros
+          context: ./frontend      # Usa el Dockerfile que está en /frontend
+          push: false              # Solo construye; no publica
+          tags: sicad-frontend:${{ github.ref_name }}  # Etiqueta con el nombre del tag
 
-  release:
-    name: Publicar Release en GitHub
-    needs: build-images
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+  release:                         # Trabajo 2: publicar el Release en GitHub
+    name: Publicar Release en GitHub   # Nombre legible del trabajo
+    needs: build-images            # Espera a que 'build-images' termine bien (si falla, no publica)
+    runs-on: ubuntu-latest         # Máquina Linux Ubuntu
+    steps:                         # Pasos del trabajo
+      - uses: actions/checkout@v4  # Paso 1: descarga el código
 
-      - name: Crear Release
-        uses: softprops/action-gh-release@v2
-        with:
-          generate_release_notes: true
-          name: SICAD ${{ github.ref_name }}
-          body: |
+      - name: Crear Release        # Paso 2: crea el Release oficial en GitHub
+        uses: softprops/action-gh-release@v2  # Acción de la comunidad para publicar releases
+        with:                      # Parámetros de la acción
+          generate_release_notes: true   # Genera automáticamente las notas de la versión (lista de cambios)
+          name: SICAD ${{ github.ref_name }}   # Título del release (ej. "SICAD v1.0.0")
+          body: |                  # Cuerpo del release en Markdown (las líneas de abajo son texto literal):
             ## SICAD ${{ github.ref_name }}
 
             Release automático generado por el pipeline de CI/CD.
