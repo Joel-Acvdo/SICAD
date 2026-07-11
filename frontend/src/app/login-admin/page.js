@@ -1,6 +1,6 @@
 'use client';
 
-// Login de la comunidad (alumnos y personal).
+// Login del personal administrativo (Caseta / Servicios Escolares).
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -10,21 +10,25 @@ import { cargarUsuarios } from '@/store/userSlice';
 import Logo from '@/components/Logo';
 import Campo from '@/components/Campo';
 
-export default function LoginAlumnos() {
+const areas = [
+  { id: 'caseta', nombre: 'Personal de Caseta', demo: 'caseta@upa.edu.mx' },
+  { id: 'escolares', nombre: 'Servicios Escolares', demo: 'admin@upa.edu.mx' },
+];
+
+export default function LoginAdmin() {
   const dispatch = useDispatch();
   const router = useRouter();
   const { usuario, error } = useSelector((s) => s.auth);
 
+  const [area, setArea] = useState('escolares');
   const [identificador, setIdentificador] = useState('');
   const [password, setPassword] = useState('');
 
-  // Prepara los datos de ejemplo y limpia errores previos.
   useEffect(() => {
     dispatch(cargarUsuarios());
     dispatch(limpiarError());
   }, [dispatch]);
 
-  // Redirige según el tipo de usuario cuando hay sesión.
   useEffect(() => {
     if (!usuario) return;
     if (usuario.tipo === 'SEGURIDAD') router.push('/caseta/validar');
@@ -37,19 +41,36 @@ export default function LoginAlumnos() {
     dispatch(login({ identificador, password }));
   };
 
+  const demoActual = areas.find((a) => a.id === area).demo;
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-marino to-marino-light p-4">
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-marino-dark to-marino p-4">
       <div className="w-full max-w-md animate-fade-in rounded-3xl bg-white p-8 shadow-2xl">
         <Logo />
-        <h1 className="mt-6 text-center text-xl font-black text-marino">Comunidad UPA</h1>
-        <p className="mb-6 text-center text-sm text-slate-500">Alumnos y personal</p>
+        <h1 className="mt-6 text-center text-xl font-black text-marino">Panel Administrativo</h1>
+        <p className="mb-5 text-center text-sm text-slate-500">Selecciona tu área</p>
+
+        <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-platino-light p-1">
+          {areas.map((a) => (
+            <button
+              key={a.id}
+              type="button"
+              onClick={() => setArea(a.id)}
+              className={`rounded-lg py-2 text-sm font-bold transition ${
+                area === a.id ? 'bg-marino text-white shadow' : 'text-marino hover:bg-white'
+              }`}
+            >
+              {a.nombre}
+            </button>
+          ))}
+        </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
           <Campo
-            label="Matrícula o correo"
+            label="Usuario o correo"
             value={identificador}
             onChange={(e) => setIdentificador(e.target.value)}
-            placeholder="UP230571 o joel.acevedo@upa.edu.mx"
+            placeholder={demoActual}
             required
           />
           <Campo
@@ -69,16 +90,16 @@ export default function LoginAlumnos() {
             type="submit"
             className="w-full rounded-xl bg-azulmedio py-3 font-bold text-white shadow transition hover:bg-marino active:scale-95"
           >
-            Iniciar sesión
+            Ingresar
           </button>
         </form>
 
-        <Link href="/login-admin" className="mt-6 block text-center text-sm font-semibold text-azulmedio hover:underline">
-          ¿Eres administrativo? Entra aquí
+        <Link href="/login" className="mt-6 block text-center text-sm font-semibold text-azulmedio hover:underline">
+          Soy alumno o personal
         </Link>
 
         <p className="mt-6 text-center text-xs text-slate-400">
-          Demo: <span className="font-mono">UP230571</span> · cualquier contraseña
+          Demo: <span className="font-mono">{demoActual}</span> · cualquier contraseña
         </p>
       </div>
     </main>
