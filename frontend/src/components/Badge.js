@@ -1,5 +1,13 @@
-// Píldora de estado (Activo, Permitido, Denegado, Vigente, etc.).
+// ============================================================================
+// Badge — Píldora de ESTADO reutilizable (Activo, Inactivo, Permitido,
+// Denegado, Vigente…). Centraliza los colores para que sean consistentes.
+//
+// Props:
+//   children -> el texto del badge
+//   tono     -> 'verde' (ok/activo) | 'rojo' (error/inactivo) | 'neutro'
+// ============================================================================
 export default function Badge({ children, tono = 'neutro' }) {
+  // Mapa de tono -> clases de color (fondo claro + texto del color).
   const estilos = {
     verde: 'bg-green-100 text-verde',
     rojo: 'bg-red-100 text-rojo',
