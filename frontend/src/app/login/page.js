@@ -1,37 +1,44 @@
-'use client';
+'use client'; // Página interactiva (usa hooks y estado) -> componente de cliente.
 
-// Login de la comunidad (alumnos y personal).
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useDispatch, useSelector } from 'react-redux';
-import { login, limpiarError } from '@/store/authSlice';
-import { cargarUsuarios } from '@/store/userSlice';
-import Logo from '@/components/Logo';
-import Campo from '@/components/Campo';
+// ============================================================================
+// /login — Inicio de sesión de la COMUNIDAD (alumnos y personal).
+// ============================================================================
+
+// --- De dónde viene cada import ---
+import { useState, useEffect } from 'react'; // hooks de React (estado y efectos)
+import { useRouter } from 'next/navigation'; // para redirigir entre páginas (Next.js)
+import Link from 'next/link'; // enlaces internos sin recargar la página
+import { useDispatch, useSelector } from 'react-redux'; // leer/escribir el estado global
+import { login, limpiarError } from '@/store/authSlice'; // actions de la sesión
+import { cargarUsuarios } from '@/store/userSlice'; // carga los usuarios (para poder validar el login)
+import Logo from '@/components/Logo'; // logo SICAD reutilizable
+import Campo from '@/components/Campo'; // input etiquetado reutilizable
 
 export default function LoginAlumnos() {
-  const dispatch = useDispatch();
-  const router = useRouter();
+  const dispatch = useDispatch(); // dispatch(action) -> modifica el estado global
+  const router = useRouter(); // router.push('/ruta') -> navega
+  // useSelector lee de la rama "auth" del store: el usuario logueado y el error.
   const { usuario, error } = useSelector((s) => s.auth);
 
+  // Estado LOCAL del formulario (solo vive en esta página).
   const [identificador, setIdentificador] = useState('');
   const [password, setPassword] = useState('');
 
-  // Prepara los datos de ejemplo y limpia errores previos.
+  // Efecto al montar: siembra los usuarios de ejemplo y limpia errores viejos.
   useEffect(() => {
     dispatch(cargarUsuarios());
     dispatch(limpiarError());
   }, [dispatch]);
 
-  // Redirige según el tipo de usuario cuando hay sesión.
+  // Efecto que reacciona cuando "usuario" cambia: si hay sesión, redirige según el rol.
   useEffect(() => {
     if (!usuario) return;
     if (usuario.tipo === 'SEGURIDAD') router.push('/caseta/validar');
     else if (usuario.tipo === 'ADMINISTRATIVO') router.push('/admin/usuarios');
-    else router.push('/credencial');
+    else router.push('/credencial'); // alumnos/personal -> su credencial
   }, [usuario, router]);
 
+  // Al enviar el formulario, dispara la action de login con lo capturado.
   const onSubmit = (e) => {
     e.preventDefault();
     dispatch(login({ identificador, password }));
@@ -45,30 +52,13 @@ export default function LoginAlumnos() {
         <p className="mb-6 text-center text-sm text-slate-500">Alumnos y personal</p>
 
         <form onSubmit={onSubmit} className="space-y-4">
-          <Campo
-            label="Matrícula o correo"
-            value={identificador}
-            onChange={(e) => setIdentificador(e.target.value)}
-            placeholder="UP230571 o joel.acevedo@upa.edu.mx"
-            required
-          />
-          <Campo
-            label="Contraseña"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-          />
+          <Campo label="Matrícula o correo" value={identificador} onChange={(e) => setIdentificador(e.target.value)} placeholder="UP230571 o joel.acevedo@upa.edu.mx" required />
+          <Campo label="Contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
 
-          {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-rojo">{error}</p>
-          )}
+          {/* El error viene del estado global (authSlice) si el usuario no existe. */}
+          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-rojo">{error}</p>}
 
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-azulmedio py-3 font-bold text-white shadow transition hover:bg-marino active:scale-95"
-          >
+          <button type="submit" className="w-full rounded-xl bg-azulmedio py-3 font-bold text-white shadow transition hover:bg-marino active:scale-95">
             Iniciar sesión
           </button>
         </form>

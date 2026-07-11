@@ -1,8 +1,17 @@
-// Estado global de CREDENCIALES, ACCESOS (bitácora) y VISITANTES externos.
+// ============================================================================
+// accessSlice.js — Rama "access" del estado global. Agrupa tres cosas
+// relacionadas con el control de acceso:
+//   - credenciales: las credenciales NFC de cada usuario y su estado.
+//   - accesos:      la BITÁCORA de eventos de entrada/salida.
+//   - visitantes:   los externos (visitantes/proveedores) con pase temporal.
+// Modo demo: todo se guarda en localStorage (aún no hay backend conectado).
+// ============================================================================
+
 import { createSlice } from '@reduxjs/toolkit';
 
-const SEED_VERSION = '3';
+const SEED_VERSION = '3'; // súbelo para reiniciar los datos de ejemplo
 
+// --- Datos de ejemplo -----------------------------------------------------
 const credencialesSeed = [
   { id_credencial: 1, codigo_nfc: 'NFC-UP230571-XYZ', estado: 'ACTIVA', fecha_emision: '2026-01-15T09:00:00.000Z', fecha_vencimiento: '2026-12-31T23:59:59.000Z', id_usuario: 1 },
   { id_credencial: 2, codigo_nfc: 'NFC-UP230164-ABC', estado: 'ACTIVA', fecha_emision: '2026-01-15T09:10:00.000Z', fecha_vencimiento: '2026-12-31T23:59:59.000Z', id_usuario: 2 },
@@ -22,14 +31,16 @@ const visitantesSeed = [
   { id_visitante: 1, nombre: 'Carlos Méndez', identificacion: 'INE-1042', empresa: 'Proveedora S.A.', motivo: 'Entrega de material', destino: 'Servicios Escolares', fecha_inicio: '2026-07-10T08:00:00.000Z', fecha_fin: '2026-07-10T14:00:00.000Z', estatus: 'VIGENTE', tipo: 'VISITANTE' },
 ];
 
+// Atajo para guardar cualquier arreglo en localStorage bajo una llave.
 function set(key, val) {
   if (typeof window !== 'undefined') localStorage.setItem(key, JSON.stringify(val));
 }
 
 const accessSlice = createSlice({
-  name: 'access',
+  name: 'access', // rama state.access
   initialState: { credenciales: [], accesos: [], visitantes: [], inicializado: false },
   reducers: {
+    // cargarAccesosYCredenciales: llena las tres listas (resiembra si cambió la versión).
     cargarAccesosYCredenciales: (state) => {
       if (typeof window === 'undefined') return;
       const version = localStorage.getItem('sicad_v_access');
@@ -48,17 +59,19 @@ const accessSlice = createSlice({
       }
       state.inicializado = true;
     },
-    // Registra un evento de acceso (entrada o salida) en la bitácora.
+    // registrarAcceso: agrega un evento a la bitácora (lo pone al inicio = más reciente).
+    // Lo usan la terminal /acceso y la validación manual de caseta.
     registrarAcceso: (state, action) => {
       const nuevo = {
-        ...action.payload,
+        ...action.payload, // { tipo_evento, resultado, punto_nombre, id_usuario }
         id_acceso: state.accesos.length ? Math.max(...state.accesos.map((a) => a.id_acceso)) + 1 : 1,
         fecha_hora: new Date().toISOString(),
       };
       state.accesos.unshift(nuevo);
       set('sicad_accesos', state.accesos);
     },
-    // Cambia el estado de una credencial (ACTIVA / REVOCADA / etc.). Si no existe, la crea.
+    // cambiarEstadoCredencial: pone la credencial de un usuario en ACTIVA/REVOCADA/etc.
+    // Si el usuario aún no tiene credencial, se la crea (así se "emite" al dar de alta).
     cambiarEstadoCredencial: (state, action) => {
       const { id_usuario, estado } = action.payload;
       const i = state.credenciales.findIndex((c) => c.id_usuario === id_usuario);
@@ -76,7 +89,7 @@ const accessSlice = createSlice({
       }
       set('sicad_credenciales', state.credenciales);
     },
-    // Renueva la vigencia (fecha de vencimiento) de la credencial de un usuario.
+    // renovarVigencia: cambia la fecha de vencimiento de la credencial de un usuario.
     renovarVigencia: (state, action) => {
       const { id_usuario, fecha_vencimiento } = action.payload;
       const i = state.credenciales.findIndex((c) => c.id_usuario === id_usuario);
@@ -86,7 +99,7 @@ const accessSlice = createSlice({
         set('sicad_credenciales', state.credenciales);
       }
     },
-    // Registra a un visitante/proveedor externo (pase temporal).
+    // registrarVisitante: alta de un externo con pase temporal (lo usa la caseta).
     registrarVisitante: (state, action) => {
       const nuevo = {
         ...action.payload,
