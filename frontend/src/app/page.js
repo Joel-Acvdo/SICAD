@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 
-// La raíz redirige al login.
+// La raíz manda al login de la comunidad.
 export default function Home() {
   redirect('/login');
 }

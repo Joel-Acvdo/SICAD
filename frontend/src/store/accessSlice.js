@@ -1,0 +1,109 @@
+// Estado global de CREDENCIALES, ACCESOS (bitácora) y VISITANTES externos.
+import { createSlice } from '@reduxjs/toolkit';
+
+const SEED_VERSION = '3';
+
+const credencialesSeed = [
+  { id_credencial: 1, codigo_nfc: 'NFC-UP230571-XYZ', estado: 'ACTIVA', fecha_emision: '2026-01-15T09:00:00.000Z', fecha_vencimiento: '2026-12-31T23:59:59.000Z', id_usuario: 1 },
+  { id_credencial: 2, codigo_nfc: 'NFC-UP230164-ABC', estado: 'ACTIVA', fecha_emision: '2026-01-15T09:10:00.000Z', fecha_vencimiento: '2026-12-31T23:59:59.000Z', id_usuario: 2 },
+  { id_credencial: 3, codigo_nfc: 'NFC-EMP0123-DOC', estado: 'ACTIVA', fecha_emision: '2026-01-10T09:00:00.000Z', fecha_vencimiento: '2027-08-31T23:59:59.000Z', id_usuario: 3 },
+  { id_credencial: 4, codigo_nfc: 'NFC-UP229988-OLD', estado: 'REVOCADA', fecha_emision: '2025-08-01T09:00:00.000Z', fecha_vencimiento: '2025-12-31T23:59:59.000Z', id_usuario: 4 },
+];
+
+const accesosSeed = [
+  { id_acceso: 1, fecha_hora: '2026-07-10T08:14:00.000Z', tipo_evento: 'ENTRADA', resultado: 'PERMITIDO', punto_nombre: 'Entrada Principal', id_usuario: 1 },
+  { id_acceso: 2, fecha_hora: '2026-07-10T10:02:00.000Z', tipo_evento: 'ENTRADA', resultado: 'PERMITIDO', punto_nombre: 'Edificio A', id_usuario: 2 },
+  { id_acceso: 3, fecha_hora: '2026-07-10T09:02:00.000Z', tipo_evento: 'ENTRADA', resultado: 'PERMITIDO', punto_nombre: 'Estacionamiento', id_usuario: 3 },
+  { id_acceso: 4, fecha_hora: '2026-07-10T09:15:00.000Z', tipo_evento: 'ENTRADA', resultado: 'DENEGADO', punto_nombre: 'Entrada Principal', id_usuario: 4 },
+  { id_acceso: 5, fecha_hora: '2026-07-09T18:45:00.000Z', tipo_evento: 'SALIDA', resultado: 'PERMITIDO', punto_nombre: 'Estacionamiento', id_usuario: 1 },
+];
+
+const visitantesSeed = [
+  { id_visitante: 1, nombre: 'Carlos Méndez', identificacion: 'INE-1042', empresa: 'Proveedora S.A.', motivo: 'Entrega de material', destino: 'Servicios Escolares', fecha_inicio: '2026-07-10T08:00:00.000Z', fecha_fin: '2026-07-10T14:00:00.000Z', estatus: 'VIGENTE', tipo: 'VISITANTE' },
+];
+
+function set(key, val) {
+  if (typeof window !== 'undefined') localStorage.setItem(key, JSON.stringify(val));
+}
+
+const accessSlice = createSlice({
+  name: 'access',
+  initialState: { credenciales: [], accesos: [], visitantes: [], inicializado: false },
+  reducers: {
+    cargarAccesosYCredenciales: (state) => {
+      if (typeof window === 'undefined') return;
+      const version = localStorage.getItem('sicad_v_access');
+      if (version !== SEED_VERSION) {
+        set('sicad_credenciales', credencialesSeed);
+        set('sicad_accesos', accesosSeed);
+        set('sicad_visitantes', visitantesSeed);
+        localStorage.setItem('sicad_v_access', SEED_VERSION);
+        state.credenciales = credencialesSeed;
+        state.accesos = accesosSeed;
+        state.visitantes = visitantesSeed;
+      } else {
+        state.credenciales = JSON.parse(localStorage.getItem('sicad_credenciales') || '[]');
+        state.accesos = JSON.parse(localStorage.getItem('sicad_accesos') || '[]');
+        state.visitantes = JSON.parse(localStorage.getItem('sicad_visitantes') || '[]');
+      }
+      state.inicializado = true;
+    },
+    // Registra un evento de acceso (entrada o salida) en la bitácora.
+    registrarAcceso: (state, action) => {
+      const nuevo = {
+        ...action.payload,
+        id_acceso: state.accesos.length ? Math.max(...state.accesos.map((a) => a.id_acceso)) + 1 : 1,
+        fecha_hora: new Date().toISOString(),
+      };
+      state.accesos.unshift(nuevo);
+      set('sicad_accesos', state.accesos);
+    },
+    // Cambia el estado de una credencial (ACTIVA / REVOCADA / etc.). Si no existe, la crea.
+    cambiarEstadoCredencial: (state, action) => {
+      const { id_usuario, estado } = action.payload;
+      const i = state.credenciales.findIndex((c) => c.id_usuario === id_usuario);
+      if (i !== -1) {
+        state.credenciales[i].estado = estado;
+      } else {
+        state.credenciales.push({
+          id_credencial: state.credenciales.length ? Math.max(...state.credenciales.map((c) => c.id_credencial)) + 1 : 1,
+          codigo_nfc: `NFC-USER${id_usuario}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
+          estado,
+          fecha_emision: new Date().toISOString(),
+          fecha_vencimiento: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+          id_usuario,
+        });
+      }
+      set('sicad_credenciales', state.credenciales);
+    },
+    // Renueva la vigencia (fecha de vencimiento) de la credencial de un usuario.
+    renovarVigencia: (state, action) => {
+      const { id_usuario, fecha_vencimiento } = action.payload;
+      const i = state.credenciales.findIndex((c) => c.id_usuario === id_usuario);
+      if (i !== -1) {
+        state.credenciales[i].fecha_vencimiento = fecha_vencimiento;
+        if (state.credenciales[i].estado === 'VENCIDA') state.credenciales[i].estado = 'ACTIVA';
+        set('sicad_credenciales', state.credenciales);
+      }
+    },
+    // Registra a un visitante/proveedor externo (pase temporal).
+    registrarVisitante: (state, action) => {
+      const nuevo = {
+        ...action.payload,
+        id_visitante: state.visitantes.length ? Math.max(...state.visitantes.map((v) => v.id_visitante)) + 1 : 1,
+        estatus: 'VIGENTE',
+      };
+      state.visitantes.unshift(nuevo);
+      set('sicad_visitantes', state.visitantes);
+    },
+  },
+});
+
+export const {
+  cargarAccesosYCredenciales,
+  registrarAcceso,
+  cambiarEstadoCredencial,
+  renovarVigencia,
+  registrarVisitante,
+} = accessSlice.actions;
+export default accessSlice.reducer;

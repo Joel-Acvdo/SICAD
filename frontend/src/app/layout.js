@@ -3,7 +3,7 @@ import Providers from '@/store/Providers';
 
 export const metadata = {
   title: 'SICAD — Control de Acceso Digital',
-  description: 'Sistema de Control de Acceso Digital · UPA',
+  description: 'Sistema de Control de Acceso Digital · Universidad Politécnica de Aguascalientes',
 };
 
 export default function RootLayout({ children }) {

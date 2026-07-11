@@ -1,0 +1,87 @@
+name: CD - Deploy a Azure          # Nombre del workflow (Despliegue continuo)
+
+# ---------------------------------------------------------------------------
+# Disparador: se ejecuta SOLO cuando algo llega a la rama main.
+# Como main solo recibe cambios aprobados por QA, cada release entra aqui.
+# ---------------------------------------------------------------------------
+on:
+  push:
+    branches: [main]                # se dispara al hacer push/merge a main
+  workflow_dispatch:                # ademas, permite lanzarlo a mano desde GitHub
+
+# Variables reutilizables en todo el workflow.
+env:
+  # Imagenes en GitHub Container Registry (ghcr.io). El usuario/owner DEBE ir en minusculas.
+  BACKEND_IMG:  ghcr.io/joel-acvdo/sicad-backend
+  FRONTEND_IMG: ghcr.io/joel-acvdo/sicad-frontend
+  # Nombres de las Web Apps creadas en Azure (cambialos por los tuyos):
+  AZURE_BACKEND_APP:  sicad-backend
+  AZURE_FRONTEND_APP: sicad-frontend
+
+# Permisos que necesita el workflow.
+permissions:
+  contents: read                    # leer el codigo
+  packages: write                   # publicar imagenes en ghcr.io
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Job 1: construir las imagenes Docker y publicarlas en ghcr.io
+  # -------------------------------------------------------------------------
+  build-push:
+    name: Construir y publicar imagenes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4   # descarga el codigo
+
+      - name: Login a GitHub Container Registry   # inicia sesion en ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}           # tu usuario de GitHub
+          password: ${{ secrets.GITHUB_TOKEN }}   # token automatico (no lo creas tu)
+
+      - name: Construir y publicar el backend      # imagen del backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMG }}:latest
+            ${{ env.BACKEND_IMG }}:${{ github.sha }}
+
+      - name: Construir y publicar el frontend     # imagen del frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          # inyecta la URL publica de la API (variable del repo) al compilar Next.js
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+          tags: |
+            ${{ env.FRONTEND_IMG }}:latest
+            ${{ env.FRONTEND_IMG }}:${{ github.sha }}
+
+  # -------------------------------------------------------------------------
+  # Job 2: desplegar las imagenes a Azure App Service
+  # -------------------------------------------------------------------------
+  deploy:
+    name: Desplegar a Azure App Service
+    needs: build-push               # espera a que las imagenes esten publicadas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login a Azure          # inicia sesion en Azure con el Service Principal
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}  # secreto que tu creas y pegas en GitHub
+
+      - name: Desplegar backend      # actualiza la Web App del backend con su imagen
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_BACKEND_APP }}
+          images: ${{ env.BACKEND_IMG }}:${{ github.sha }}
+
+      - name: Desplegar frontend     # actualiza la Web App del frontend con su imagen
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ env.AZURE_FRONTEND_APP }}
+          images: ${{ env.FRONTEND_IMG }}:${{ github.sha }}
