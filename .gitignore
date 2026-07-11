@@ -47,3 +47,8 @@ desktop.ini
 
 # Scripts locales de apoyo (no versionar)
 autor.ps1
+
+# Archivos de diseño y exportaciones (no versionar)
+/Mockups
+/export-figma/
+/package-lock.json
