@@ -1,11 +1,31 @@
 # SICAD — Sistema de Control de Acceso Digital
 
-Plataforma de software para el control de acceso digital de la comunidad universitaria
+Plataforma web y móvil para el control de acceso digital de la comunidad universitaria
 de la **Universidad Politécnica de Aguascalientes (UPA)**. Reemplaza las tarjetas físicas
-por credenciales digitales **NFC**, revoca privilegios automáticamente al dar de baja a un
-usuario y gestiona el ingreso temporal de visitantes/proveedores desde un portal de caseta.
+por credenciales digitales **NFC**, valida el acceso en tiempo real, revoca privilegios
+automáticamente al dar de baja a un usuario y gestiona el ingreso temporal de
+visitantes/proveedores desde un portal de caseta. Todo queda en una bitácora auditable.
 
 > Proyecto Integrador · ISC08C · 8vo Cuatrimestre · Equipo SICAD
+
+🔗 Repositorio: https://github.com/Joel-Acvdo/SICAD
+
+---
+
+## Estado del proyecto
+
+| Parte | Estado |
+|-------|--------|
+| **Frontend** (Next.js + Redux) | ✅ Funcional — todas las pantallas conectadas al estado global |
+| **Backend** (Express + Prisma) | 🟡 Módulo de Auth (JWT) listo; faltan los demás módulos |
+| **Base de datos** (PostgreSQL) | 🟡 Esquema Prisma completo (6 entidades) + migración inicial |
+| **CI/CD** (GitHub Actions) | ✅ 3 pipelines: build/test, release y deploy a Azure |
+| **Mockups + guía de estilo** | ✅ 14 pantallas (escritorio y móvil) + guía de estilo |
+| **Despliegue en Azure** | ⏳ Pipeline listo; falta crear recursos y secretos |
+
+> **Nota:** hoy el frontend corre en **modo demo** con estado local (Redux + localStorage),
+> por lo que se puede probar completo sin levantar el backend. La conexión front↔backend
+> con Axios es el siguiente paso.
 
 ---
 
@@ -15,72 +35,72 @@ Monorepo con dos aplicaciones y una base de datos relacional:
 
 ```
 SICAD/
-├── backend/      → API REST (Node.js + Express + Prisma + JWT)
-├── frontend/     → Portal web (Next.js + React + Tailwind + Redux Toolkit)
+├── backend/            → API REST (Node.js + Express + Prisma + JWT)
+├── frontend/           → Portal web (Next.js + React + Tailwind + Redux Toolkit)
+├── documentacion/      → Documentación técnica y de planeación
 ├── docker-compose.yml
-└── .github/workflows/   → CI/CD (build + release automatizados)
+└── .github/workflows/  → CI/CD (build+test, release y deploy a Azure)
 ```
 
 | Capa            | Tecnología                                              |
 |-----------------|---------------------------------------------------------|
-| Frontend        | Next.js, React, Tailwind CSS, Redux Toolkit, Axios      |
+| Frontend        | Next.js 14, React, Tailwind CSS, Redux Toolkit, Axios   |
 | Backend         | Node.js, Express.js, Prisma ORM, JWT                    |
-| Base de datos   | PostgreSQL                                              |
-| Pruebas         | Jest (unitarias + integración), Postman                 |
-| DevOps          | Docker, Docker Compose, GitHub Actions (CI/CD)          |
+| Base de datos   | PostgreSQL (en la nube: Azure Database for PostgreSQL)  |
+| Pruebas         | Jest (unitarias + integración)                          |
+| DevOps          | Docker, GitHub Actions (CI/CD), Azure App Service       |
 
-### Módulos
+### Estado global (Redux)
 
-1. **Autenticación (JWT)** — login, roles y permisos (RBAC).
-2. **Gestión de usuarios** — alta/baja/edición con revocación automática de privilegios.
-3. **Credenciales NFC** — emisión, asignación y validación.
-4. **Control de acceso** — validación de credencial y registro del evento.
-5. **Portal de caseta** — registro y gestión de externos.
-6. **Bitácora y reportes** — historial de accesos para consulta y auditoría.
+Tres slices en `frontend/src/store/`:
+- `authSlice` — sesión y usuario autenticado.
+- `userSlice` — usuarios de la comunidad (alta, edición, revocación).
+- `accessSlice` — credenciales, accesos (bitácora) y visitantes externos.
+
+### Pantallas
+
+Login (alumnos y administrativos), credencial digital, terminal de validación NFC
+(permitido/denegado), gestión de usuarios (buscar/editar/renovar/revocar), registrar y
+editar usuario, bitácora de servicios escolares, y el portal de caseta (validar alumno por
+nombre, registrar externo, bitácora en vivo). Todo responsivo (escritorio y móvil).
 
 ---
 
-## Puesta en marcha (desarrollo)
+## Puesta en marcha
 
-### Opción A — Todo con Docker (recomendada)
+### Frontend (modo demo — no requiere backend)
+
+```bash
+cd frontend
+npm install
+npm run dev          # http://localhost:3000
+```
+
+**Credenciales demo** (cualquier contraseña):
+
+| Usuario | Rol | Va a… |
+|---------|-----|-------|
+| `UP230571` | Alumno | su credencial digital |
+| `admin@upa.edu.mx` | Servicios Escolares | gestión de usuarios |
+| `caseta@upa.edu.mx` | Caseta / Seguridad | portal de caseta |
+
+### Backend + base de datos
+
+```bash
+docker compose up -d db      # PostgreSQL en Docker
+cd backend
+cp .env.example .env         # ajusta DATABASE_URL y JWT_SECRET
+npm install
+npx prisma migrate dev       # crea las tablas
+npm run seed                 # datos de ejemplo
+npm run dev                  # http://localhost:4000
+```
+
+### Todo con Docker
 
 ```bash
 docker compose up --build
 ```
-
-- Backend → http://localhost:4000
-- Frontend → http://localhost:3000
-- PostgreSQL → localhost:5432
-
-### Opción B — Local (sin Docker)
-
-Necesitas un PostgreSQL corriendo. Luego:
-
-```bash
-# 1. Levantar solo la base de datos con Docker
-docker compose up -d db
-
-# 2. Backend
-cd backend
-cp .env.example .env        # ajusta DATABASE_URL y JWT_SECRET
-npm install
-npx prisma migrate dev      # crea las tablas
-npm run seed                # datos de ejemplo (roles, admin, puntos)
-npm run dev
-
-# 3. Frontend (en otra terminal)
-cd frontend
-cp .env.local.example .env.local
-npm install
-npm run dev
-```
-
-### Credenciales de ejemplo (tras el seed)
-
-| Correo                | Contraseña   | Rol           |
-|-----------------------|--------------|---------------|
-| admin@upa.edu.mx      | Admin123!    | Administrador |
-| caseta@upa.edu.mx     | Caseta123!   | Seguridad     |
 
 ---
 
@@ -98,13 +118,8 @@ feature/* ──▶ dev ──▶ qa ──▶ main
 | `qa`    | Pruebas. QA valida lo que viene de `dev` antes de pasar a `main`.|
 | `dev`   | Integración de desarrollo. Aquí se juntan las features.         |
 
-**Flujo:**
-1. Cada integrante crea una rama `feature/mi-tarea` desde `dev`.
-2. Pull Request hacia `dev`.
-3. Cuando `dev` está estable → PR hacia `qa`.
-4. QA prueba y aprueba → PR de `qa` hacia `main`.
-
-> Nadie hace push directo a `qa` ni a `main`: todo pasa por Pull Request.
+QA (Ximena) valida e integra de `dev` a `qa` y aprueba el paso a `main`. Cada commit se
+atribuye al integrante que hizo esa parte según su rol.
 
 ---
 
@@ -113,17 +128,28 @@ feature/* ──▶ dev ──▶ qa ──▶ main
 ```bash
 cd backend
 npm test            # Jest: unitarias + integración
-npm run test:watch
 ```
 
 ---
 
-## CI/CD
+## CI/CD (`.github/workflows/`)
 
-- **`.github/workflows/ci.yml`** — en cada push/PR a `dev`, `qa` y `main`: instala
-  dependencias, corre lint, ejecuta las pruebas de Jest y construye el frontend.
-- **`.github/workflows/release.yml`** — al crear un tag `v*` (ej. `v1.0.0`): construye
-  las imágenes Docker y publica un **Release** automático en GitHub.
+| Pipeline | Archivo | Cuándo | Qué hace |
+|----------|---------|--------|----------|
+| **CI — Build & Test** | `ci.yml` | push/PR a dev, qa, main | instala, corre Jest y compila el frontend |
+| **Release** | `release.yml` | al crear un tag `v*` | construye imágenes Docker + publica un Release |
+| **CD — Deploy a Azure** | `deploy.yml` | push a `main` | build+push de imágenes a ghcr.io y despliegue a Azure App Service |
+
+Los tres están comentados. El despliegue a Azure usa **Azure Database for PostgreSQL** +
+**App Service (contenedores)** y requiere el secreto `AZURE_CREDENTIALS` en GitHub.
+
+---
+
+## Documentación
+
+- `documentacion/tecnica/` — arquitectura, base de datos (diagrama ER en Mermaid), etc.
+- `documentacion/planeacion/` — Project Charter, propuesta, planeación y estrategia de pruebas.
+- Mockups y guía de estilo (Pencil / PNG) y PDF de documentación del proyecto.
 
 ---
 
