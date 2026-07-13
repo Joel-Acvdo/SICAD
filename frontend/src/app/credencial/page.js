@@ -10,23 +10,15 @@ import { cargarAccesosYCredenciales, cambiarEstadoCredencial } from '@/store/acc
 import TopBar from '@/components/TopBar';
 import Badge from '@/components/Badge';
 import Modal from '@/components/Modal';
+import QrCode from '@/components/QrCode'; // QR real (escaneable), alternativa al NFC
 import { formatVigencia, formatFechaHora, nombreCompleto } from '@/lib/format';
 
+// Ícono de "señal NFC" (líneas curvas). Se dibuja como SVG en línea.
 function IconoNFC({ className }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 8a8 8 0 0 1 0 8M10 6a12 12 0 0 1 0 12M14 18a12 12 0 0 0 0-12M18 16a8 8 0 0 0 0-8" />
     </svg>
-  );
-}
-function QrDecorativo() {
-  const celdas = Array.from({ length: 36 }, (_, i) => (i * 7) % 3 === 0 || i % 5 === 0);
-  return (
-    <div className="grid grid-cols-6 gap-0.5 rounded-lg bg-white p-1.5">
-      {celdas.map((on, i) => (
-        <span key={i} className={`h-2 w-2 ${on ? 'bg-marino' : 'bg-white'}`} />
-      ))}
-    </div>
   );
 }
 
@@ -121,7 +113,8 @@ export default function CredencialDigital() {
                 <Badge tono={tono}>{cred.estado}</Badge>
                 <p className="text-[11px] text-platino">Vigencia: {formatVigencia(cred.fecha_vencimiento)}</p>
               </div>
-              <QrDecorativo />
+              {/* QR real: codifica el código de la credencial (sirve si no hay NFC) */}
+              <QrCode value={cred.codigo_nfc} size={52} />
             </div>
           </div>
 
@@ -169,15 +162,19 @@ export default function CredencialDigital() {
       {modalNFC && (
         <Modal onClose={() => setModalNFC(false)}>
           <div className="flex flex-col items-center text-center">
-            <div className="mb-5 flex h-28 w-28 animate-pulse items-center justify-center rounded-full bg-marino/5 text-marino">
-              <IconoNFC className="h-14 w-14" />
+            <h3 className="text-lg font-black text-marino">Muestra tu credencial</h3>
+            <p className="mt-1 text-sm text-slate-500">Escanea el QR en el lector, o acerca tu teléfono por NFC.</p>
+            {/* QR grande para escanear cuando el punto de acceso no tiene lector NFC */}
+            <div className="mt-4">
+              <QrCode value={cred.codigo_nfc} size={180} />
             </div>
-            <h3 className="text-lg font-black text-marino">Acerca tu teléfono al lector</h3>
-            <p className="mt-1 text-sm text-slate-500">Tu credencial digital está lista para validarse.</p>
-            <p className="mt-4 rounded-lg bg-platino-light px-4 py-2 font-mono text-xs text-marino">{cred.codigo_nfc}</p>
+            <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-azulmedio">
+              <IconoNFC className="h-4 w-4" /> NFC activo
+            </div>
+            <p className="mt-2 rounded-lg bg-platino-light px-4 py-2 font-mono text-[11px] text-marino">{cred.codigo_nfc}</p>
             <button
               onClick={() => setModalNFC(false)}
-              className="mt-6 w-full rounded-xl bg-marino py-3 font-bold text-white"
+              className="mt-5 w-full rounded-xl bg-marino py-3 font-bold text-white"
             >
               Listo
             </button>

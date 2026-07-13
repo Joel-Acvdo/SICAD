@@ -29,6 +29,7 @@ export default function GestionUsuarios() {
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState('TODOS');
   const [modal, setModal] = useState(null); // { tipo, usuario }
+  const [renovarMeses, setRenovarMeses] = useState(12); // periodo elegido en el modal de renovar
 
   useEffect(() => {
     dispatch(cargarUsuarios());
@@ -74,18 +75,20 @@ export default function GestionUsuarios() {
     dispatch(cambiarEstadoCredencial({ id_usuario: u.id_usuario, estado: 'ACTIVA' }));
     setModal({ tipo: 'activado', usuario: u });
   };
-  const renovar = (u) => {
+  // Aplica la renovación: suma "meses" a la vigencia actual y actualiza la credencial.
+  const renovar = (u, meses = 12) => {
     const c = credDe(u.id_usuario);
     const base = c ? new Date(c.fecha_vencimiento) : new Date();
-    base.setFullYear(base.getFullYear() + 1);
+    base.setMonth(base.getMonth() + meses);
     dispatch(renovarVigencia({ id_usuario: u.id_usuario, fecha_vencimiento: base.toISOString() }));
     setModal(null);
   };
 
-  const nuevaVigencia = (u) => {
+  // Calcula (sin aplicar) cómo quedaría la nueva vigencia, para mostrarla en el modal.
+  const nuevaVigencia = (u, meses = 12) => {
     const c = credDe(u.id_usuario);
     const base = c ? new Date(c.fecha_vencimiento) : new Date();
-    base.setFullYear(base.getFullYear() + 1);
+    base.setMonth(base.getMonth() + meses);
     return formatVigencia(base.toISOString());
   };
 
@@ -177,7 +180,7 @@ export default function GestionUsuarios() {
                     <td className="px-5 py-3">
                       <div className="flex justify-end gap-1.5">
                         <BotonIcono onClick={() => router.push(`/admin/usuarios/${u.id_usuario}`)} titulo="Editar" bg="bg-platino-light" color="text-slate-600"><IcoEditar className="h-4 w-4" /></BotonIcono>
-                        <BotonIcono onClick={() => renovar(u)} titulo="Renovar" bg="bg-blue-50" color="text-azulmedio"><IcoRenovar className="h-4 w-4" /></BotonIcono>
+                        <BotonIcono onClick={() => { setRenovarMeses(12); setModal({ tipo: 'renovar', usuario: u }); }} titulo="Renovar" bg="bg-blue-50" color="text-azulmedio"><IcoRenovar className="h-4 w-4" /></BotonIcono>
                         {activo ? (
                           <BotonIcono onClick={() => setModal({ tipo: 'revocar', usuario: u })} titulo="Revocar" bg="bg-red-50" color="text-rojo"><IcoX className="h-4 w-4" /></BotonIcono>
                         ) : (
@@ -210,7 +213,7 @@ export default function GestionUsuarios() {
                 <p className={`mt-2 text-xs font-semibold ${vig.rojo ? 'text-rojo' : 'text-slate-500'}`}>Vigencia: {vig.txt}</p>
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   <BtnMovil onClick={() => router.push(`/admin/usuarios/${u.id_usuario}`)} bg="bg-platino-light" color="text-marino"><IcoEditar className="h-4 w-4" /> Editar</BtnMovil>
-                  <BtnMovil onClick={() => renovar(u)} bg="bg-blue-50" color="text-azulmedio"><IcoRenovar className="h-4 w-4" /> Renovar</BtnMovil>
+                  <BtnMovil onClick={() => { setRenovarMeses(12); setModal({ tipo: 'renovar', usuario: u }); }} bg="bg-blue-50" color="text-azulmedio"><IcoRenovar className="h-4 w-4" /> Renovar</BtnMovil>
                   {activo ? (
                     <BtnMovil onClick={() => setModal({ tipo: 'revocar', usuario: u })} bg="bg-red-50" color="text-rojo"><IcoX className="h-4 w-4" /> Revocar</BtnMovil>
                   ) : (
@@ -228,6 +231,49 @@ export default function GestionUsuarios() {
           Al revocar el acceso, la credencial NFC del usuario queda inhabilitada de inmediato (revocación automática de privilegios).
         </p>
       </main>
+
+      {/* Modal: renovar vigencia (muestra vigencia actual -> nueva) */}
+      {modal?.tipo === 'renovar' && (
+        <Modal onClose={() => setModal(null)}>
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-azulmedio">
+              <IcoRenovar className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-black text-marino">Renovar vigencia</h3>
+            <p className="mt-1 text-sm text-slate-500">{nombreCompleto(modal.usuario)} · {modal.usuario.matricula_empleado}</p>
+
+            {/* Comparación: lo que tiene hoy vs cómo quedaría */}
+            <div className="mt-5 flex w-full items-center gap-3">
+              <div className="flex-1 rounded-xl bg-platino-light p-3 text-center">
+                <p className="text-[11px] font-semibold text-slate-500">Vigencia actual</p>
+                <p className="text-base font-black text-marino">{vigenciaDe(modal.usuario).txt}</p>
+              </div>
+              <svg className="h-5 w-5 shrink-0 text-slate-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+              <div className="flex-1 rounded-xl bg-green-100 p-3 text-center">
+                <p className="text-[11px] font-semibold text-verde">Nueva vigencia</p>
+                <p className="text-base font-black text-verde">{nuevaVigencia(modal.usuario, renovarMeses)}</p>
+              </div>
+            </div>
+
+            {/* Selector de periodo */}
+            <div className="mt-4 w-full">
+              <p className="mb-1.5 text-left text-xs font-bold text-marino">Periodo de renovación</p>
+              <div className="grid grid-cols-2 gap-2 rounded-xl bg-platino-light p-1">
+                {[{ m: 12, t: '+ 1 año' }, { m: 6, t: '+ 6 meses' }].map((o) => (
+                  <button key={o.m} onClick={() => setRenovarMeses(o.m)} className={`rounded-lg py-2 text-xs font-bold transition ${renovarMeses === o.m ? 'bg-marino text-white shadow' : 'text-marino hover:bg-white'}`}>
+                    {o.t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 flex w-full gap-3">
+              <button onClick={() => setModal(null)} className="flex-1 rounded-xl border border-platino bg-white py-3 text-sm font-bold text-marino hover:bg-platino-light">Cancelar</button>
+              <button onClick={() => renovar(modal.usuario, renovarMeses)} className="flex-1 rounded-xl bg-azulmedio py-3 text-sm font-bold text-white hover:bg-marino">Renovar credencial</button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {/* Modal: confirmar revocación */}
       {modal?.tipo === 'revocar' && (
