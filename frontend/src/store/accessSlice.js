@@ -1,7 +1,7 @@
 // ============================================================================
 // accessSlice.js — Rama "access" del estado global. Agrupa tres cosas
 // relacionadas con el control de acceso:
-//   - credenciales: las credenciales NFC de cada usuario y su estado.
+//   - credenciales: las credenciales digitales (QR) de cada usuario y su estado.
 //   - accesos:      la BITÁCORA de eventos de entrada/salida.
 //   - visitantes:   los externos (visitantes/proveedores) con pase temporal.
 // Modo demo: todo se guarda en localStorage (aún no hay backend conectado).
@@ -9,14 +9,14 @@
 
 import { createSlice } from '@reduxjs/toolkit';
 
-const SEED_VERSION = '3'; // súbelo para reiniciar los datos de ejemplo
+const SEED_VERSION = '4'; // súbelo para reiniciar los datos de ejemplo
 
 // --- Datos de ejemplo -----------------------------------------------------
 const credencialesSeed = [
-  { id_credencial: 1, codigo_nfc: 'NFC-UP230571-XYZ', estado: 'ACTIVA', fecha_emision: '2026-01-15T09:00:00.000Z', fecha_vencimiento: '2026-12-31T23:59:59.000Z', id_usuario: 1 },
-  { id_credencial: 2, codigo_nfc: 'NFC-UP230164-ABC', estado: 'ACTIVA', fecha_emision: '2026-01-15T09:10:00.000Z', fecha_vencimiento: '2026-12-31T23:59:59.000Z', id_usuario: 2 },
-  { id_credencial: 3, codigo_nfc: 'NFC-EMP0123-DOC', estado: 'ACTIVA', fecha_emision: '2026-01-10T09:00:00.000Z', fecha_vencimiento: '2027-08-31T23:59:59.000Z', id_usuario: 3 },
-  { id_credencial: 4, codigo_nfc: 'NFC-UP229988-OLD', estado: 'REVOCADA', fecha_emision: '2025-08-01T09:00:00.000Z', fecha_vencimiento: '2025-12-31T23:59:59.000Z', id_usuario: 4 },
+  { id_credencial: 1, codigo_qr: 'QR-UP230571-XYZ', estado: 'ACTIVA', fecha_emision: '2026-01-15T09:00:00.000Z', fecha_vencimiento: '2026-12-31T23:59:59.000Z', id_usuario: 1 },
+  { id_credencial: 2, codigo_qr: 'QR-UP230164-ABC', estado: 'ACTIVA', fecha_emision: '2026-01-15T09:10:00.000Z', fecha_vencimiento: '2026-12-31T23:59:59.000Z', id_usuario: 2 },
+  { id_credencial: 3, codigo_qr: 'QR-EMP0123-DOC', estado: 'ACTIVA', fecha_emision: '2026-01-10T09:00:00.000Z', fecha_vencimiento: '2027-08-31T23:59:59.000Z', id_usuario: 3 },
+  { id_credencial: 4, codigo_qr: 'QR-UP229988-OLD', estado: 'REVOCADA', fecha_emision: '2025-08-01T09:00:00.000Z', fecha_vencimiento: '2025-12-31T23:59:59.000Z', id_usuario: 4 },
 ];
 
 const accesosSeed = [
@@ -80,7 +80,7 @@ const accessSlice = createSlice({
       } else {
         state.credenciales.push({
           id_credencial: state.credenciales.length ? Math.max(...state.credenciales.map((c) => c.id_credencial)) + 1 : 1,
-          codigo_nfc: `NFC-USER${id_usuario}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
+          codigo_qr: `QR-USER${id_usuario}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
           estado,
           fecha_emision: new Date().toISOString(),
           fecha_vencimiento: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),

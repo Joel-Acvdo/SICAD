@@ -1,6 +1,6 @@
 'use client';
 
-// Alta de un nuevo usuario de la comunidad (emite su credencial NFC al guardar).
+// Alta de un nuevo usuario de la comunidad (emite su credencial digital al guardar).
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
@@ -33,7 +33,7 @@ export default function NuevoUsuario() {
     if (!f.nombre || !f.apellidos || !f.correo) return;
     const nextId = lista.length ? Math.max(...lista.map((u) => u.id_usuario)) + 1 : 1;
     dispatch(agregarUsuario(f));
-    dispatch(cambiarEstadoCredencial({ id_usuario: nextId, estado: 'ACTIVA' })); // emite la credencial NFC
+    dispatch(cambiarEstadoCredencial({ id_usuario: nextId, estado: 'ACTIVA' })); // emite la credencial digital
     router.push('/admin/usuarios');
   };
 
@@ -45,7 +45,7 @@ export default function NuevoUsuario() {
         {/* Formulario */}
         <form onSubmit={guardar} className="rounded-2xl border border-platino-light bg-white p-6 shadow-sm md:col-span-2">
           <h1 className="text-xl font-black text-marino">Registrar alumno o personal</h1>
-          <p className="mb-5 text-sm text-slate-500">Al guardar se emite automáticamente su credencial NFC.</p>
+          <p className="mb-5 text-sm text-slate-500">Al guardar se emite automáticamente su credencial digital.</p>
 
           <div className="mb-4">
             <span className="mb-1.5 block text-xs font-bold text-marino">Tipo de usuario</span>
@@ -92,7 +92,7 @@ export default function NuevoUsuario() {
             </div>
             <span className="w-fit rounded-full bg-verde px-3 py-1 text-[9px] font-black">ACTIVA</span>
           </div>
-          <p className="mt-3 text-xs text-slate-400">La credencial NFC se genera automáticamente al registrar al usuario.</p>
+          <p className="mt-3 text-xs text-slate-400">La credencial digital se genera automáticamente al registrar al usuario.</p>
         </div>
       </main>
     </div>
