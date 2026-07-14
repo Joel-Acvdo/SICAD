@@ -9,6 +9,8 @@ PostgreSQL (Flexible Server)**.
 
 ## Diagrama Entidad–Relación
 
+> También disponible como imagen: [`diagrama-er-sicad.png`](./diagrama-er-sicad.png).
+
 ```mermaid
 erDiagram
     ROL ||--o{ USUARIO : "tiene"

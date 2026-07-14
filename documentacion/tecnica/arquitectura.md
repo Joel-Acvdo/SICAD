@@ -58,7 +58,8 @@ SICAD/
 Portal web en [`frontend/`](../../frontend) con **Next.js (App Router)** y **React**. El estilo
 se maneja con **Tailwind CSS** y el estado global con **Redux Toolkit** (slices `auth`, `users`,
 `access`). El consumo de la API se centraliza en un cliente **Axios** (`src/lib/api.js`) que
-adjunta el token JWT. Las pantallas replican los mockups de diseño (escritorio y móvil).
+adjunta el token JWT. Las pantallas replican los mockups de diseño (escritorio y móvil):
+ver el **flujo completo de pantallas** en [`frontend.md`](./frontend.md).
 
 ### Backend
 
