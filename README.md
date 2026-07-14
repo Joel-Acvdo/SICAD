@@ -50,6 +50,8 @@ SICAD/
 | Pruebas         | Jest (unitarias + integración)                          |
 | DevOps          | Docker, GitHub Actions (CI/CD), Azure App Service       |
 
+> Diagrama y detalle del monorepo (frontend ↔ backend ↔ base de datos): [`documentacion/tecnica/arquitectura.md`](documentacion/tecnica/arquitectura.md).
+
 ### Estado global (Redux)
 
 Tres slices en `frontend/src/store/`:
@@ -147,9 +149,12 @@ Los tres están comentados. El despliegue a Azure usa **Azure Database for Postg
 
 ## Documentación
 
-- `documentacion/tecnica/` — arquitectura, base de datos (diagrama ER en Mermaid), etc.
-- `documentacion/planeacion/` — Project Charter, propuesta, planeación y estrategia de pruebas.
-- Mockups y guía de estilo (Pencil / PNG) y PDF de documentación del proyecto.
+Toda la documentación vive en [`documentacion/`](documentacion/README.md):
+
+- **Técnica** ([índice](documentacion/tecnica/README.md)) — [arquitectura](documentacion/tecnica/arquitectura.md) del monorepo (frontend ↔ backend ↔ base de datos) y [modelo de base de datos](documentacion/tecnica/base-de-datos.md) (diagrama ER en Mermaid).
+- **Planeación** ([índice](documentacion/planeacion/README.md)) — Project Charter, propuesta, planeación inicial y estrategia de pruebas.
+- **Cómo colaborar** — [CONTRIBUTING.md](CONTRIBUTING.md): flujo de ramas (`feature → dev → qa → main`) y convención de commits.
+- Mockups y guía de estilo (Pencil / PNG).
 
 ---
 
