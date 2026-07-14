@@ -1,5 +1,7 @@
 # Guía de contribución — SICAD
 
+> Parte de **SICAD** · Panorama del proyecto: [README](README.md) · Documentación técnica: [arquitectura](documentacion/tecnica/arquitectura.md) y [base de datos](documentacion/tecnica/base-de-datos.md).
+
 Trabajamos simulando un entorno laboral con **tres ramas** y Pull Requests.
 
 ## Ramas
