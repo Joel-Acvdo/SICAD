@@ -66,7 +66,7 @@ enum EstatusUsuario {
 // ─────────────────────────────────────────────
 model Credencial {
   id_credencial     Int              @id @default(autoincrement())
-  codigo_nfc        String           @unique @db.VarChar(255)
+  codigo_qr         String           @unique @db.VarChar(255)
   estado            EstadoCredencial @default(ACTIVA)
   fecha_emision     DateTime         @default(now())
   fecha_vencimiento DateTime

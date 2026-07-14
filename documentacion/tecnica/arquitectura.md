@@ -59,7 +59,7 @@ Definido en `backend/prisma/schema.prisma`. Entidades principales:
 |---------|-------------|------------|
 | **Rol** | Roles del sistema (Administrador, Seguridad, Comunidad) | 1—N con Usuario |
 | **Usuario** | Comunidad interna (alumnos y trabajadores) | N—1 con Rol; 1—N con Credencial y Visitante |
-| **Credencial** | Credencial digital NFC asociada a un usuario | N—1 con Usuario; 1—N con Acceso |
+| **Credencial** | Credencial digital con código QR asociada a un usuario | N—1 con Usuario; 1—N con Acceso |
 | **Visitante** | Externos registrados temporalmente | N—1 con Usuario (quien registra); 1—N con Acceso |
 | **PuntoAcceso** | Puntos físicos de acceso del campus | 1—N con Acceso |
 | **Acceso** | Bitácora de eventos de entrada/salida | N—1 con Credencial, Visitante y PuntoAcceso |
@@ -72,7 +72,7 @@ Un evento de **Acceso** lo genera **una credencial** (comunidad) **o un visitant
 |--------|--------|-------------|
 | **Autenticación (auth)** | Implementado | Login con JWT, registro y perfil. RBAC por roles. |
 | Gestión de usuarios | Pendiente | CRUD + revocación automática de privilegios |
-| Credenciales NFC | Pendiente | Emisión, asignación y validación |
+| Credenciales QR | Pendiente | Emisión, asignación y validación |
 | Control de acceso | Pendiente | Validación de credencial y registro de evento |
 | Visitantes / caseta | Pendiente | Registro temporal de externos |
 | Bitácora y reportes | Pendiente | Consulta e historial de accesos |
