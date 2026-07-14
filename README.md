@@ -2,7 +2,7 @@
 
 Plataforma web y móvil para el control de acceso digital de la comunidad universitaria
 de la **Universidad Politécnica de Aguascalientes (UPA)**. Reemplaza las tarjetas físicas
-por credenciales digitales **NFC**, valida el acceso en tiempo real, revoca privilegios
+por credenciales digitales con **código QR**, valida el acceso en tiempo real, revoca privilegios
 automáticamente al dar de baja a un usuario y gestiona el ingreso temporal de
 visitantes/proveedores desde un portal de caseta. Todo queda en una bitácora auditable.
 
@@ -59,7 +59,7 @@ Tres slices en `frontend/src/store/`:
 
 ### Pantallas
 
-Login (alumnos y administrativos), credencial digital, terminal de validación NFC
+Login (alumnos y administrativos), credencial digital, terminal de validación por QR
 (permitido/denegado), gestión de usuarios (buscar/editar/renovar/revocar), registrar y
 editar usuario, bitácora de servicios escolares, y el portal de caseta (validar alumno por
 nombre, registrar externo, bitácora en vivo). Todo responsivo (escritorio y móvil).

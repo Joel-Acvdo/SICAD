@@ -1,6 +1,6 @@
 'use client';
 
-// Caseta: valida el acceso de un alumno buscándolo por nombre (cuando no trae su NFC).
+// Caseta: valida el acceso de un alumno buscándolo por nombre (cuando no trae su QR).
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
@@ -61,7 +61,7 @@ export default function ValidarAlumno() {
       <TabsCaseta />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8">
-        <h1 className="text-xl font-black text-marino">Validar acceso sin credencial NFC</h1>
+        <h1 className="text-xl font-black text-marino">Validar acceso sin credencial</h1>
         <p className="mb-5 text-sm text-slate-500">
           Busca al alumno por nombre o matrícula cuando no pueda presentar su credencial (por ejemplo, celular sin batería).
         </p>
@@ -112,7 +112,7 @@ export default function ValidarAlumno() {
           })}
         </div>
 
-        <p className="mt-6 text-xs text-slate-400">El acceso manual queda registrado en la bitácora igual que un acceso por NFC.</p>
+        <p className="mt-6 text-xs text-slate-400">El acceso manual queda registrado en la bitácora igual que un acceso por QR.</p>
       </main>
     </div>
   );

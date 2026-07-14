@@ -46,7 +46,7 @@ Usamos [Conventional Commits](https://www.conventionalcommits.org/):
 | `refactor` | Reestructura sin cambiar comportamiento   |
 | `chore`    | Configuración, dependencias, CI           |
 
-Ejemplo: `feat(credenciales): valida vigencia NFC en el acceso`
+Ejemplo: `feat(credenciales): valida vigencia QR en el acceso`
 
 ## Antes de abrir un PR
 
