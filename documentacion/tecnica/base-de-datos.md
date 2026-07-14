@@ -36,7 +36,7 @@ erDiagram
 
     CREDENCIAL {
         int id_credencial PK
-        varchar codigo_nfc UK "255, requerido"
+        varchar codigo_qr UK "255, requerido"
         enum estado "EstadoCredencial, default ACTIVA"
         timestamp fecha_emision "default now()"
         timestamp fecha_vencimiento "requerido"
@@ -114,12 +114,12 @@ erDiagram
 | fecha_registro | timestamp | default now() |
 | id_rol | int | FK → rol.id_rol |
 
-**credencial** — credencial digital NFC
+**credencial** — credencial digital con código QR
 
 | Columna | Tipo | Restricción |
 |---------|------|-------------|
 | id_credencial | serial | PK |
-| codigo_nfc | varchar(255) | UNIQUE, NOT NULL |
+| codigo_qr | varchar(255) | UNIQUE, NOT NULL |
 | estado | EstadoCredencial | default ACTIVA |
 | fecha_emision | timestamp | default now() |
 | fecha_vencimiento | timestamp | NOT NULL |

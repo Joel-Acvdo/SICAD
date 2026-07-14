@@ -44,7 +44,7 @@ CREATE TABLE "usuario" (
 -- CreateTable
 CREATE TABLE "credencial" (
     "id_credencial" SERIAL NOT NULL,
-    "codigo_nfc" VARCHAR(255) NOT NULL,
+    "codigo_qr" VARCHAR(255) NOT NULL,
     "estado" "EstadoCredencial" NOT NULL DEFAULT 'ACTIVA',
     "fecha_emision" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "fecha_vencimiento" TIMESTAMP(3) NOT NULL,
@@ -100,7 +100,7 @@ CREATE UNIQUE INDEX "usuario_correo_key" ON "usuario"("correo");
 CREATE UNIQUE INDEX "usuario_matricula_empleado_key" ON "usuario"("matricula_empleado");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "credencial_codigo_nfc_key" ON "credencial"("codigo_nfc");
+CREATE UNIQUE INDEX "credencial_codigo_qr_key" ON "credencial"("codigo_qr");
 
 -- CreateIndex
 CREATE INDEX "acceso_fecha_hora_idx" ON "acceso"("fecha_hora");
