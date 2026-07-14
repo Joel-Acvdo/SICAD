@@ -1,8 +1,11 @@
 # Base de datos · SICAD
 
-Motor: **PostgreSQL**. El modelo se define en `backend/prisma/schema.prisma` y se despliega
-mediante migraciones de Prisma. En producción se monta sobre **Azure Database for PostgreSQL
-(Flexible Server)**.
+> [Documentación](../README.md) › Técnica ([índice](./README.md)) › **Base de datos** · Relacionado: [Arquitectura](./arquitectura.md) (frontend ↔ backend ↔ BD)
+
+Motor: **PostgreSQL**. El modelo se define en [`backend/prisma/schema.prisma`](../../backend/prisma/schema.prisma)
+y se despliega mediante migraciones de Prisma. Lo consume el **backend** vía Prisma ORM
+(ver [arquitectura.md](./arquitectura.md)). En producción se monta sobre **Azure Database for
+PostgreSQL (Flexible Server)**.
 
 ## Diagrama Entidad–Relación
 

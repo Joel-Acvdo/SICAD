@@ -1,5 +1,7 @@
 # Arquitectura · SICAD
 
+> [Documentación](../README.md) › Técnica ([índice](./README.md)) › **Arquitectura** · Relacionado: [Base de datos](./base-de-datos.md) · [README del proyecto](../../README.md)
+
 Documento técnico de la arquitectura del Sistema de Control de Acceso Digital.
 
 ## 1. Visión general
@@ -51,9 +53,24 @@ SICAD/
 └── docker-compose.yml      Orquestación (db + backend + frontend)
 ```
 
+### Frontend
+
+Portal web en [`frontend/`](../../frontend) con **Next.js (App Router)** y **React**. El estilo
+se maneja con **Tailwind CSS** y el estado global con **Redux Toolkit** (slices `auth`, `users`,
+`access`). El consumo de la API se centraliza en un cliente **Axios** (`src/lib/api.js`) que
+adjunta el token JWT. Las pantallas replican los mockups de diseño (escritorio y móvil).
+
+### Backend
+
+API REST en [`backend/`](../../backend) con **Express** y **Prisma ORM** sobre **PostgreSQL**.
+Se organiza por módulos de dominio (ver §5). La autenticación usa **JWT** y la autorización un
+middleware de **RBAC** por roles. El modelo de datos completo está en
+[`base-de-datos.md`](./base-de-datos.md).
+
 ## 4. Modelo de datos (Entidad–Relación)
 
-Definido en `backend/prisma/schema.prisma`. Entidades principales:
+Definido en `backend/prisma/schema.prisma` — ver el diagrama ER y el diccionario de datos completo
+en [`base-de-datos.md`](./base-de-datos.md). Entidades principales:
 
 | Entidad | Descripción | Relaciones |
 |---------|-------------|------------|

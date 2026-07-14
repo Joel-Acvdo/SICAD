@@ -1,6 +1,16 @@
 # Documentación técnica · SICAD
 
+> [Documentación](../README.md) › **Técnica** · [README del proyecto](../../README.md) · [Cómo contribuir](../../CONTRIBUTING.md)
+
 Documentación del **código y la arquitectura** del sistema. Se actualiza conforme avanza el desarrollo.
+
+## Por capa
+
+| Capa | Dónde | Documento |
+|------|-------|-----------|
+| **Frontend** (Next.js + Redux) | [`frontend/`](../../frontend) | [arquitectura.md → Frontend](./arquitectura.md#frontend) |
+| **Backend** (Express + Prisma + JWT) | [`backend/`](../../backend) | [arquitectura.md → Backend](./arquitectura.md#backend) |
+| **Base de datos** (PostgreSQL) | [`backend/prisma/`](../../backend/prisma) | [base-de-datos.md](./base-de-datos.md) |
 
 ## Índice
 
