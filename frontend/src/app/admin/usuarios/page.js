@@ -228,7 +228,7 @@ export default function GestionUsuarios() {
         {usuarios.length === 0 && <p className="py-10 text-center text-sm text-slate-400">No se encontraron usuarios.</p>}
 
         <p className="mt-4 text-xs text-slate-400">
-          Al revocar el acceso, la credencial NFC del usuario queda inhabilitada de inmediato (revocación automática de privilegios).
+          Al revocar el acceso, la credencial del usuario queda inhabilitada de inmediato (revocación automática de privilegios).
         </p>
       </main>
 
@@ -285,7 +285,7 @@ export default function GestionUsuarios() {
             <h3 className="text-lg font-black text-marino">¿Revocar acceso?</h3>
             <p className="mt-2 text-sm text-slate-500">
               Vas a marcar como inactivo a <b>{nombreCompleto(modal.usuario)}</b> ({modal.usuario.matricula_empleado}).
-              Su credencial NFC quedará inhabilitada de inmediato y no podrá ingresar.
+              Su credencial quedará inhabilitada de inmediato y no podrá ingresar.
             </p>
             <div className="mt-6 flex w-full gap-3">
               <button onClick={() => setModal(null)} className="flex-1 rounded-xl border border-platino bg-white py-3 text-sm font-bold text-marino hover:bg-platino-light">Cancelar</button>
@@ -304,7 +304,7 @@ export default function GestionUsuarios() {
             </div>
             <h3 className="text-lg font-black text-marino">Usuario activado</h3>
             <p className="mt-2 text-sm text-slate-500">
-              <b>{nombreCompleto(modal.usuario)}</b> vuelve a tener acceso al campus y su credencial NFC ya funciona.
+              <b>{nombreCompleto(modal.usuario)}</b> vuelve a tener acceso al campus y su credencial ya funciona.
             </p>
             <div className="mt-4 flex w-full items-center justify-center gap-3 rounded-xl bg-green-100 p-4">
               <svg className="h-6 w-6 text-verde" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>

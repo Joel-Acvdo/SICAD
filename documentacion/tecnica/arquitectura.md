@@ -1,5 +1,7 @@
 # Arquitectura · SICAD
 
+> [Documentación](../README.md) › Técnica ([índice](./README.md)) › **Arquitectura** · Relacionado: [Base de datos](./base-de-datos.md) · [README del proyecto](../../README.md)
+
 Documento técnico de la arquitectura del Sistema de Control de Acceso Digital.
 
 ## 1. Visión general
@@ -51,15 +53,31 @@ SICAD/
 └── docker-compose.yml      Orquestación (db + backend + frontend)
 ```
 
+### Frontend
+
+Portal web en [`frontend/`](../../frontend) con **Next.js (App Router)** y **React**. El estilo
+se maneja con **Tailwind CSS** y el estado global con **Redux Toolkit** (slices `auth`, `users`,
+`access`). El consumo de la API se centraliza en un cliente **Axios** (`src/lib/api.js`) que
+adjunta el token JWT. Las pantallas replican los mockups de diseño (escritorio y móvil):
+ver el **flujo completo de pantallas** en [`frontend.md`](./frontend.md).
+
+### Backend
+
+API REST en [`backend/`](../../backend) con **Express** y **Prisma ORM** sobre **PostgreSQL**.
+Se organiza por módulos de dominio (ver §5). La autenticación usa **JWT** y la autorización un
+middleware de **RBAC** por roles. El modelo de datos completo está en
+[`base-de-datos.md`](./base-de-datos.md).
+
 ## 4. Modelo de datos (Entidad–Relación)
 
-Definido en `backend/prisma/schema.prisma`. Entidades principales:
+Definido en `backend/prisma/schema.prisma` — ver el diagrama ER y el diccionario de datos completo
+en [`base-de-datos.md`](./base-de-datos.md). Entidades principales:
 
 | Entidad | Descripción | Relaciones |
 |---------|-------------|------------|
 | **Rol** | Roles del sistema (Administrador, Seguridad, Comunidad) | 1—N con Usuario |
 | **Usuario** | Comunidad interna (alumnos y trabajadores) | N—1 con Rol; 1—N con Credencial y Visitante |
-| **Credencial** | Credencial digital NFC asociada a un usuario | N—1 con Usuario; 1—N con Acceso |
+| **Credencial** | Credencial digital con código QR asociada a un usuario | N—1 con Usuario; 1—N con Acceso |
 | **Visitante** | Externos registrados temporalmente | N—1 con Usuario (quien registra); 1—N con Acceso |
 | **PuntoAcceso** | Puntos físicos de acceso del campus | 1—N con Acceso |
 | **Acceso** | Bitácora de eventos de entrada/salida | N—1 con Credencial, Visitante y PuntoAcceso |
@@ -70,12 +88,12 @@ Un evento de **Acceso** lo genera **una credencial** (comunidad) **o un visitant
 
 | Módulo | Estado | Descripción |
 |--------|--------|-------------|
-| **Autenticación (auth)** | Implementado | Login con JWT, registro y perfil. RBAC por roles. |
-| Gestión de usuarios | Pendiente | CRUD + revocación automática de privilegios |
-| Credenciales NFC | Pendiente | Emisión, asignación y validación |
-| Control de acceso | Pendiente | Validación de credencial y registro de evento |
-| Visitantes / caseta | Pendiente | Registro temporal de externos |
-| Bitácora y reportes | Pendiente | Consulta e historial de accesos |
+| **Autenticación (auth)** | Implementado | Login con JWT (por correo o matrícula), registro y perfil. RBAC por roles. |
+| **Gestión de usuarios** | Implementado | CRUD + emisión de credencial + revocación automática de privilegios |
+| **Credenciales QR** | Implementado | Listado, credencial propia y renovación de vigencia |
+| **Control de acceso** | Implementado | Registro de evento (resuelve credencial y punto) |
+| **Visitantes / caseta** | Implementado | Registro temporal de externos |
+| **Bitácora y reportes** | Implementado | Consulta e historial de accesos |
 
 ## 6. Seguridad
 
@@ -85,14 +103,28 @@ Un evento de **Acceso** lo genera **una credencial** (comunidad) **o un visitant
 - **Revocación de privilegios:** un usuario con estatus distinto de `ACTIVO` no puede
   iniciar sesión ni validar acceso.
 
-## 7. Endpoints implementados (Auth)
+## 7. Endpoints implementados
 
 | Método | Ruta | Descripción | Protección |
 |--------|------|-------------|------------|
 | `GET`  | `/api/health` | Estado del servicio | Pública |
-| `POST` | `/api/auth/login` | Inicia sesión, devuelve token JWT | Pública |
-| `POST` | `/api/auth/registro` | Alta de usuario | Solo Administrador |
+| `POST` | `/api/auth/login` | Inicia sesión (correo o matrícula), devuelve token JWT | Pública |
+| `POST` | `/api/auth/registro` | Alta de usuario | Administrador |
 | `GET`  | `/api/auth/perfil` | Datos del usuario autenticado | Autenticado |
+| `GET`  | `/api/usuarios` | Lista de usuarios | Administrador, Seguridad |
+| `POST` | `/api/usuarios` | Alta de usuario + emisión de credencial | Administrador |
+| `GET`  | `/api/usuarios/:id` | Detalle de un usuario | Autenticado |
+| `PUT`  | `/api/usuarios/:id` | Edición de un usuario | Administrador |
+| `PATCH`| `/api/usuarios/:id/estatus` | Activar / revocar (revoca credencial en cascada) | Administrador |
+| `GET`  | `/api/credenciales` | Todas las credenciales | Administrador, Seguridad |
+| `GET`  | `/api/credenciales/mia` | Credencial del usuario autenticado | Autenticado |
+| `PATCH`| `/api/credenciales/usuario/:id/vigencia` | Renueva la vigencia | Administrador |
+| `GET`  | `/api/accesos` | Bitácora completa (filtro `?id_usuario=`) | Administrador, Seguridad |
+| `GET`  | `/api/accesos/mios` | Historial del usuario autenticado | Autenticado |
+| `POST` | `/api/accesos` | Registra un evento de acceso | Administrador, Seguridad |
+| `GET`  | `/api/visitantes` | Lista de externos | Administrador, Seguridad |
+| `POST` | `/api/visitantes` | Registra un externo con pase temporal | Administrador, Seguridad |
+| `GET`  | `/api/puntos` | Puntos de acceso del campus | Autenticado |
 
 ## 8. Cómo ejecutar
 

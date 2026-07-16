@@ -1,6 +1,6 @@
 'use client';
 
-// Página principal del usuario: su credencial digital NFC + historial de accesos.
+// Página principal del usuario: su credencial digital con QR + historial de accesos.
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
@@ -10,14 +10,14 @@ import { cargarAccesosYCredenciales, cambiarEstadoCredencial } from '@/store/acc
 import TopBar from '@/components/TopBar';
 import Badge from '@/components/Badge';
 import Modal from '@/components/Modal';
-import QrCode from '@/components/QrCode'; // QR real (escaneable), alternativa al NFC
+import QrCode from '@/components/QrCode'; // QR real (escaneable) de la credencial
 import { formatVigencia, formatFechaHora, nombreCompleto } from '@/lib/format';
 
-// Ícono de "señal NFC" (líneas curvas). Se dibuja como SVG en línea.
-function IconoNFC({ className }) {
+// Ícono de código QR (decorativo). Se dibuja como SVG en línea.
+function IconoQR({ className }) {
   return (
-    <svg className={className} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 8a8 8 0 0 1 0 8M10 6a12 12 0 0 1 0 12M14 18a12 12 0 0 0 0-12M18 16a8 8 0 0 0 0-8" />
+    <svg className={className} fill="currentColor" viewBox="0 0 24 24">
+      <path d="M2 2h6v6H2V2zm1.5 1.5v3h3v-3h-3zM2 16h6v6H2v-6zm1.5 1.5v3h3v-3h-3zM16 2h6v6h-6V2zm1.5 1.5v3h3v-3h-3zM16 16h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-4 4h2v2h-2v-2zm6 0h2v2h-2v-2zm-6-6h2v2h-2v-2zm2 2h2v2h-2v-2zm0-4h2v2h-2v-2zm2 2h2v2h-2v-2zM9 9h2v2H9V9zm2 2h2v2h-2v-2zm-2 2h2v2H9v-2zm4-4h2v2h-2V9zm-2-2h2v2h-2V7zm-2 0h2v2H9V7zm4-4h2v2h-2V3zm-2 2h2v2h-2V5z" />
     </svg>
   );
 }
@@ -29,7 +29,7 @@ export default function CredencialDigital() {
   const { credenciales, accesos, inicializado } = useSelector((s) => s.access);
 
   const [modalPerdida, setModalPerdida] = useState(false);
-  const [modalNFC, setModalNFC] = useState(false);
+  const [mostrarQR, setMostrarQR] = useState(false);
 
   useEffect(() => {
     dispatch(cargarUsuarios());
@@ -49,7 +49,7 @@ export default function CredencialDigital() {
   }
 
   const cred = credenciales.find((c) => c.id_usuario === usuario.id_usuario) || {
-    codigo_nfc: 'NO-ASIGNADO',
+    codigo_qr: 'NO-ASIGNADO',
     estado: 'INACTIVA',
     fecha_vencimiento: new Date().toISOString(),
   };
@@ -92,7 +92,7 @@ export default function CredencialDigital() {
                 <p className="text-lg font-black tracking-wide">SICAD</p>
                 <p className="text-[9px] font-bold tracking-widest text-platino">CREDENCIAL DIGITAL · UPA</p>
               </div>
-              <IconoNFC className="h-7 w-7 text-platino" />
+              <IconoQR className="h-7 w-7 text-platino" />
             </div>
 
             <div className="flex items-center gap-4">
@@ -113,17 +113,19 @@ export default function CredencialDigital() {
                 <Badge tono={tono}>{cred.estado}</Badge>
                 <p className="text-[11px] text-platino">Vigencia: {formatVigencia(cred.fecha_vencimiento)}</p>
               </div>
-              {/* QR real: codifica el código de la credencial (sirve si no hay NFC) */}
-              <QrCode value={cred.codigo_nfc} size={52} />
+              {/* QR real: codifica el código de la credencial */}
+              <QrCode value={cred.codigo_qr} size={52} />
             </div>
           </div>
 
+          {/* Botones de acción */}
           <div className="mt-5 grid w-full max-w-sm grid-cols-2 gap-3">
             <button
-              onClick={() => setModalNFC(true)}
-              className="rounded-xl bg-azulmedio py-3 text-sm font-bold text-white shadow transition hover:bg-marino"
+              onClick={() => setMostrarQR(true)}
+              disabled={cred.estado !== 'ACTIVA'}
+              className="rounded-xl bg-azulmedio py-3 text-sm font-bold text-white shadow transition hover:bg-marino disabled:opacity-50"
             >
-              Mostrar para acceso
+              Mostrar código QR
             </button>
             <button
               onClick={() => setModalPerdida(true)}
@@ -158,22 +160,19 @@ export default function CredencialDigital() {
         </section>
       </main>
 
-      {/* Modal: mostrar credencial NFC */}
-      {modalNFC && (
-        <Modal onClose={() => setModalNFC(false)}>
+      {/* Modal: mostrar el QR grande para escanear en el punto de acceso */}
+      {mostrarQR && (
+        <Modal onClose={() => setMostrarQR(false)}>
           <div className="flex flex-col items-center text-center">
-            <h3 className="text-lg font-black text-marino">Muestra tu credencial</h3>
-            <p className="mt-1 text-sm text-slate-500">Escanea el QR en el lector, o acerca tu teléfono por NFC.</p>
-            {/* QR grande para escanear cuando el punto de acceso no tiene lector NFC */}
+            <h3 className="text-lg font-black text-marino">Tu código QR de acceso</h3>
+            <p className="mt-1 text-sm text-slate-500">Preséntalo ante la cámara o el lector de la terminal de acceso.</p>
+            {/* QR grande para escanear en el punto de acceso */}
             <div className="mt-4">
-              <QrCode value={cred.codigo_nfc} size={180} />
+              <QrCode value={cred.codigo_qr} size={200} />
             </div>
-            <div className="mt-3 flex items-center gap-1.5 text-xs font-bold text-azulmedio">
-              <IconoNFC className="h-4 w-4" /> NFC activo
-            </div>
-            <p className="mt-2 rounded-lg bg-platino-light px-4 py-2 font-mono text-[11px] text-marino">{cred.codigo_nfc}</p>
+            <p className="mt-3 rounded-lg bg-platino-light px-4 py-2 font-mono text-[11px] text-marino">{cred.codigo_qr}</p>
             <button
-              onClick={() => setModalNFC(false)}
+              onClick={() => setMostrarQR(false)}
               className="mt-5 w-full rounded-xl bg-marino py-3 font-bold text-white"
             >
               Listo
@@ -193,7 +192,7 @@ export default function CredencialDigital() {
             </div>
             <h3 className="text-lg font-black text-marino">¿Reportar tu credencial como perdida?</h3>
             <p className="mt-2 text-sm text-slate-500">
-              Tu credencial NFC se <b>revocará de inmediato</b> y no podrás ingresar hasta que Servicios Escolares
+              Tu credencial se <b>revocará de inmediato</b> y no podrás ingresar hasta que Servicios Escolares
               emita una nueva.
             </p>
             <div className="mt-6 flex w-full gap-3">

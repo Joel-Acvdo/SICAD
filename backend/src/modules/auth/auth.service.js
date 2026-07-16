@@ -33,13 +33,15 @@ async function registrar(datos) {
   return sanitizar(usuario);
 }
 
-async function login(correo, password) {
-  const usuario = await prisma.usuario.findUnique({
-    where: { correo },
+async function login(identificador, password) {
+  // Permite iniciar sesión con correo O matrícula/número de empleado.
+  const id = identificador.trim();
+  const usuario = await prisma.usuario.findFirst({
+    where: { OR: [{ correo: id }, { matricula_empleado: id }] },
     include: { rol: true },
   });
 
-  // Mensaje genérico para no revelar si el correo existe.
+  // Mensaje genérico para no revelar si el usuario existe.
   if (!usuario) throw ApiError.unauthorized('Credenciales incorrectas');
 
   // Revocación automática de privilegios: un usuario inactivo no puede entrar.

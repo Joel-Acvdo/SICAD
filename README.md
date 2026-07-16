@@ -2,7 +2,7 @@
 
 Plataforma web y móvil para el control de acceso digital de la comunidad universitaria
 de la **Universidad Politécnica de Aguascalientes (UPA)**. Reemplaza las tarjetas físicas
-por credenciales digitales **NFC**, valida el acceso en tiempo real, revoca privilegios
+por credenciales digitales con **código QR**, valida el acceso en tiempo real, revoca privilegios
 automáticamente al dar de baja a un usuario y gestiona el ingreso temporal de
 visitantes/proveedores desde un portal de caseta. Todo queda en una bitácora auditable.
 
@@ -50,6 +50,8 @@ SICAD/
 | Pruebas         | Jest (unitarias + integración)                          |
 | DevOps          | Docker, GitHub Actions (CI/CD), Azure App Service       |
 
+> Diagrama y detalle del monorepo (frontend ↔ backend ↔ base de datos): [`documentacion/tecnica/arquitectura.md`](documentacion/tecnica/arquitectura.md).
+
 ### Estado global (Redux)
 
 Tres slices en `frontend/src/store/`:
@@ -59,7 +61,7 @@ Tres slices en `frontend/src/store/`:
 
 ### Pantallas
 
-Login (alumnos y administrativos), credencial digital, terminal de validación NFC
+Login (alumnos y administrativos), credencial digital, terminal de validación por QR
 (permitido/denegado), gestión de usuarios (buscar/editar/renovar/revocar), registrar y
 editar usuario, bitácora de servicios escolares, y el portal de caseta (validar alumno por
 nombre, registrar externo, bitácora en vivo). Todo responsivo (escritorio y móvil).
@@ -147,9 +149,12 @@ Los tres están comentados. El despliegue a Azure usa **Azure Database for Postg
 
 ## Documentación
 
-- `documentacion/tecnica/` — arquitectura, base de datos (diagrama ER en Mermaid), etc.
-- `documentacion/planeacion/` — Project Charter, propuesta, planeación y estrategia de pruebas.
-- Mockups y guía de estilo (Pencil / PNG) y PDF de documentación del proyecto.
+Toda la documentación vive en [`documentacion/`](documentacion/README.md):
+
+- **Técnica** ([índice](documentacion/tecnica/README.md)) — [arquitectura](documentacion/tecnica/arquitectura.md) del monorepo (frontend ↔ backend ↔ base de datos) y [modelo de base de datos](documentacion/tecnica/base-de-datos.md) (diagrama ER en Mermaid).
+- **Planeación** ([índice](documentacion/planeacion/README.md)) — Project Charter, propuesta, planeación inicial y estrategia de pruebas.
+- **Cómo colaborar** — [CONTRIBUTING.md](CONTRIBUTING.md): flujo de ramas (`feature → dev → qa → main`) y convención de commits.
+- Mockups y guía de estilo (Pencil / PNG).
 
 ---
 

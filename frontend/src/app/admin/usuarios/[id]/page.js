@@ -75,7 +75,7 @@ export default function EditarUsuario() {
           <div className="mb-5 flex items-start justify-between">
             <div>
               <h1 className="text-xl font-black text-marino">Editar usuario</h1>
-              <p className="text-sm text-slate-500">La credencial NFC conserva su código.</p>
+              <p className="text-sm text-slate-500">La credencial conserva su código.</p>
             </div>
             <Badge tono={activo ? 'verde' : 'rojo'}>{activo ? 'Activo' : 'Inactivo'}</Badge>
           </div>

@@ -38,6 +38,9 @@ services:
   frontend:
     build:
       context: ./frontend
+      args:
+        # NEXT_PUBLIC_* se hornea en tiempo de BUILD (no en runtime), por eso va como build arg.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
     container_name: sicad_frontend
     restart: unless-stopped
     depends_on:

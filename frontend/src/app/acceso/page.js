@@ -1,6 +1,6 @@
 'use client';
 
-// Terminal del lector NFC en un punto de acceso (validación en tiempo real).
+// Terminal del lector de QR en un punto de acceso (validación en tiempo real).
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
@@ -77,13 +77,13 @@ export default function TerminalAcceso() {
           {estado === 'idle' && (
             <div className="flex animate-fade-in flex-col items-center">
               <div className="mb-6 flex h-28 w-28 animate-pulse items-center justify-center rounded-full border border-marino/10 bg-marino/5 text-marino">
-                <svg className="h-14 w-14" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 8a8 8 0 0 1 0 8M10 6a12 12 0 0 1 0 12M14 18a12 12 0 0 0 0-12M18 16a8 8 0 0 0 0-8" />
+                <svg className="h-14 w-14" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M2 2h6v6H2V2zm1.5 1.5v3h3v-3h-3zM2 16h6v6H2v-6zm1.5 1.5v3h3v-3h-3zM16 2h6v6h-6V2zm1.5 1.5v3h3v-3h-3zM16 16h2v2h-2v-2zm2 2h2v2h-2v-2zm2-2h2v2h-2v-2zm-4 4h2v2h-2v-2zm6 0h2v2h-2v-2zm-6-6h2v2h-2v-2zm2 2h2v2h-2v-2zm0-4h2v2h-2v-2zm2 2h2v2h-2v-2zM9 9h2v2H9V9zm2 2h2v2h-2v-2zm-2 2h2v2H9v-2zm4-4h2v2h-2V9zm-2-2h2v2h-2V7zm-2 0h2v2H9V7zm4-4h2v2h-2V3zm-2 2h2v2h-2V5z"/>
                 </svg>
               </div>
               <h2 className="text-xl font-black text-marino">Terminal de acceso activa</h2>
               <p className="mt-2 max-w-xs text-xs leading-relaxed text-slate-500">
-                Acerca la credencial digital NFC del teléfono o la tarjeta física al lector.
+                Escanea el código QR de tu credencial digital frente a la cámara o el lector óptico de la terminal.
               </p>
             </div>
           )}

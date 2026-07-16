@@ -33,6 +33,7 @@ model Usuario {
   apellidos          String         @db.VarChar(100)
   correo             String         @unique @db.VarChar(150)
   matricula_empleado String?        @unique @db.VarChar(50)
+  carrera            String?        @db.VarChar(150)
   password_hash      String         @db.VarChar(255)
   tipo               TipoUsuario
   estatus            EstatusUsuario @default(ACTIVO)
@@ -66,7 +67,7 @@ enum EstatusUsuario {
 // ─────────────────────────────────────────────
 model Credencial {
   id_credencial     Int              @id @default(autoincrement())
-  codigo_nfc        String           @unique @db.VarChar(255)
+  codigo_qr         String           @unique @db.VarChar(255)
   estado            EstadoCredencial @default(ACTIVA)
   fecha_emision     DateTime         @default(now())
   fecha_vencimiento DateTime

@@ -1,0 +1,11 @@
+# Binarios: git NO debe aplicar conversión de fin de línea (podría corromperlos).
+*.pdf   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.pen   binary
+*.gz    binary
+*.zip   binary

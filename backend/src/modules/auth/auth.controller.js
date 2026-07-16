@@ -12,8 +12,8 @@ async function registrar(req, res, next) {
 
 async function login(req, res, next) {
   try {
-    const { correo, password } = req.body;
-    const data = await authService.login(correo, password);
+    const { identificador, password } = req.body;
+    const data = await authService.login(identificador, password);
     res.status(200).json(data);
   } catch (err) {
     next(err);
