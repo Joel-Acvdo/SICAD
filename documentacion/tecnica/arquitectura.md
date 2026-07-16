@@ -88,12 +88,12 @@ Un evento de **Acceso** lo genera **una credencial** (comunidad) **o un visitant
 
 | Módulo | Estado | Descripción |
 |--------|--------|-------------|
-| **Autenticación (auth)** | Implementado | Login con JWT, registro y perfil. RBAC por roles. |
-| Gestión de usuarios | Pendiente | CRUD + revocación automática de privilegios |
-| Credenciales QR | Pendiente | Emisión, asignación y validación |
-| Control de acceso | Pendiente | Validación de credencial y registro de evento |
-| Visitantes / caseta | Pendiente | Registro temporal de externos |
-| Bitácora y reportes | Pendiente | Consulta e historial de accesos |
+| **Autenticación (auth)** | Implementado | Login con JWT (por correo o matrícula), registro y perfil. RBAC por roles. |
+| **Gestión de usuarios** | Implementado | CRUD + emisión de credencial + revocación automática de privilegios |
+| **Credenciales QR** | Implementado | Listado, credencial propia y renovación de vigencia |
+| **Control de acceso** | Implementado | Registro de evento (resuelve credencial y punto) |
+| **Visitantes / caseta** | Implementado | Registro temporal de externos |
+| **Bitácora y reportes** | Implementado | Consulta e historial de accesos |
 
 ## 6. Seguridad
 
@@ -103,14 +103,28 @@ Un evento de **Acceso** lo genera **una credencial** (comunidad) **o un visitant
 - **Revocación de privilegios:** un usuario con estatus distinto de `ACTIVO` no puede
   iniciar sesión ni validar acceso.
 
-## 7. Endpoints implementados (Auth)
+## 7. Endpoints implementados
 
 | Método | Ruta | Descripción | Protección |
 |--------|------|-------------|------------|
 | `GET`  | `/api/health` | Estado del servicio | Pública |
-| `POST` | `/api/auth/login` | Inicia sesión, devuelve token JWT | Pública |
-| `POST` | `/api/auth/registro` | Alta de usuario | Solo Administrador |
+| `POST` | `/api/auth/login` | Inicia sesión (correo o matrícula), devuelve token JWT | Pública |
+| `POST` | `/api/auth/registro` | Alta de usuario | Administrador |
 | `GET`  | `/api/auth/perfil` | Datos del usuario autenticado | Autenticado |
+| `GET`  | `/api/usuarios` | Lista de usuarios | Administrador, Seguridad |
+| `POST` | `/api/usuarios` | Alta de usuario + emisión de credencial | Administrador |
+| `GET`  | `/api/usuarios/:id` | Detalle de un usuario | Autenticado |
+| `PUT`  | `/api/usuarios/:id` | Edición de un usuario | Administrador |
+| `PATCH`| `/api/usuarios/:id/estatus` | Activar / revocar (revoca credencial en cascada) | Administrador |
+| `GET`  | `/api/credenciales` | Todas las credenciales | Administrador, Seguridad |
+| `GET`  | `/api/credenciales/mia` | Credencial del usuario autenticado | Autenticado |
+| `PATCH`| `/api/credenciales/usuario/:id/vigencia` | Renueva la vigencia | Administrador |
+| `GET`  | `/api/accesos` | Bitácora completa (filtro `?id_usuario=`) | Administrador, Seguridad |
+| `GET`  | `/api/accesos/mios` | Historial del usuario autenticado | Autenticado |
+| `POST` | `/api/accesos` | Registra un evento de acceso | Administrador, Seguridad |
+| `GET`  | `/api/visitantes` | Lista de externos | Administrador, Seguridad |
+| `POST` | `/api/visitantes` | Registra un externo con pase temporal | Administrador, Seguridad |
+| `GET`  | `/api/puntos` | Puntos de acceso del campus | Autenticado |
 
 ## 8. Cómo ejecutar
 
