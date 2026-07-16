@@ -1,5 +1,5 @@
 // Datos iniciales para arrancar el sistema:
-// roles base, usuarios administrativos y puntos de acceso de ejemplo.
+// roles, usuarios (admin, caseta y comunidad), credenciales, puntos y accesos de ejemplo.
 
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
@@ -15,51 +15,58 @@ async function main() {
     update: {},
     create: { nombre: 'Administrador', descripcion: 'Acceso total al sistema' },
   });
-
   const rolSeguridad = await prisma.rol.upsert({
     where: { nombre: 'Seguridad' },
     update: {},
     create: { nombre: 'Seguridad', descripcion: 'Personal de caseta: gestiona externos y bitácora' },
   });
-
   const rolComunidad = await prisma.rol.upsert({
     where: { nombre: 'Comunidad' },
     update: {},
     create: { nombre: 'Comunidad', descripcion: 'Alumnos y trabajadores activos' },
   });
 
-  // --- Usuarios ---
-  const adminHash = await bcrypt.hash('Admin123!', 10);
-  await prisma.usuario.upsert({
-    where: { correo: 'admin@upa.edu.mx' },
-    update: {},
-    create: {
-      nombre: 'Administrador',
-      apellidos: 'SICAD',
-      correo: 'admin@upa.edu.mx',
-      matricula_empleado: 'EMP0001',
-      password_hash: adminHash,
-      tipo: 'ADMINISTRATIVO',
-      estatus: 'ACTIVO',
-      id_rol: rolAdmin.id_rol,
-    },
-  });
+  // --- Contraseñas demo (hasheadas con bcrypt) ---
+  const passAdmin = await bcrypt.hash('Admin123!', 10);
+  const passCaseta = await bcrypt.hash('Caseta123!', 10);
+  const passComunidad = await bcrypt.hash('Alumno123!', 10);
 
-  const casetaHash = await bcrypt.hash('Caseta123!', 10);
-  await prisma.usuario.upsert({
-    where: { correo: 'caseta@upa.edu.mx' },
-    update: {},
-    create: {
-      nombre: 'Personal',
-      apellidos: 'Caseta',
-      correo: 'caseta@upa.edu.mx',
-      matricula_empleado: 'EMP0002',
-      password_hash: casetaHash,
-      tipo: 'SEGURIDAD',
-      estatus: 'ACTIVO',
-      id_rol: rolSeguridad.id_rol,
-    },
-  });
+  // --- Usuarios (upsert por correo, idempotente) ---
+  const usuarios = [
+    { nombre: 'Administrador', apellidos: 'SICAD', correo: 'admin@upa.edu.mx', matricula_empleado: 'EMP0001', carrera: 'Servicios Escolares', tipo: 'ADMINISTRATIVO', estatus: 'ACTIVO', id_rol: rolAdmin.id_rol, password_hash: passAdmin },
+    { nombre: 'Personal', apellidos: 'Caseta', correo: 'caseta@upa.edu.mx', matricula_empleado: 'EMP0002', carrera: 'Vigilancia', tipo: 'SEGURIDAD', estatus: 'ACTIVO', id_rol: rolSeguridad.id_rol, password_hash: passCaseta },
+    { nombre: 'Joel Alberto', apellidos: 'Acevedo Moreno', correo: 'joel.acevedo@upa.edu.mx', matricula_empleado: 'UP230571', carrera: 'Ing. en Sistemas Computacionales', tipo: 'ALUMNO', estatus: 'ACTIVO', id_rol: rolComunidad.id_rol, password_hash: passComunidad },
+    { nombre: 'Andrei', apellidos: 'Torres Sánchez', correo: 'andrei.torres@upa.edu.mx', matricula_empleado: 'UP230164', carrera: 'Ing. en Sistemas Computacionales', tipo: 'ALUMNO', estatus: 'ACTIVO', id_rol: rolComunidad.id_rol, password_hash: passComunidad },
+    { nombre: 'María Fernanda', apellidos: 'Pérez', correo: 'maria.perez@upa.edu.mx', matricula_empleado: 'EMP0123', carrera: 'Departamento de Docencia', tipo: 'DOCENTE', estatus: 'ACTIVO', id_rol: rolComunidad.id_rol, password_hash: passComunidad },
+    { nombre: 'Luis', apellidos: 'Ramírez Gómez', correo: 'luis.ramirez@upa.edu.mx', matricula_empleado: 'UP229988', carrera: 'Ing. Industrial', tipo: 'ALUMNO', estatus: 'INACTIVO', id_rol: rolComunidad.id_rol, password_hash: passComunidad },
+  ];
+
+  const porMatricula = {};
+  for (const u of usuarios) {
+    const { password_hash, ...sinPass } = u;
+    const usuario = await prisma.usuario.upsert({
+      where: { correo: u.correo },
+      update: sinPass, // no reescribe la contraseña en re-siembras
+      create: u,
+    });
+    porMatricula[u.matricula_empleado] = usuario;
+  }
+
+  // --- Credenciales de la comunidad (upsert por codigo_qr) ---
+  const credenciales = [
+    { codigo_qr: 'QR-UP230571-XYZ', estado: 'ACTIVA', matricula: 'UP230571', vence: new Date('2026-12-31T23:59:59.000Z') },
+    { codigo_qr: 'QR-UP230164-ABC', estado: 'ACTIVA', matricula: 'UP230164', vence: new Date('2026-12-31T23:59:59.000Z') },
+    { codigo_qr: 'QR-EMP0123-DOC', estado: 'ACTIVA', matricula: 'EMP0123', vence: new Date('2027-08-31T23:59:59.000Z') },
+    { codigo_qr: 'QR-UP229988-OLD', estado: 'REVOCADA', matricula: 'UP229988', vence: new Date('2025-12-31T23:59:59.000Z') },
+  ];
+  for (const c of credenciales) {
+    const usuario = porMatricula[c.matricula];
+    await prisma.credencial.upsert({
+      where: { codigo_qr: c.codigo_qr },
+      update: { estado: c.estado, fecha_vencimiento: c.vence, id_usuario: usuario.id_usuario },
+      create: { codigo_qr: c.codigo_qr, estado: c.estado, fecha_vencimiento: c.vence, id_usuario: usuario.id_usuario },
+    });
+  }
 
   // --- Puntos de acceso ---
   const puntos = [
@@ -72,9 +79,27 @@ async function main() {
     if (!existe) await prisma.puntoAcceso.create({ data: p });
   }
 
+  // --- Accesos de ejemplo (solo si la bitácora está vacía) ---
+  if ((await prisma.acceso.count()) === 0) {
+    const cred = (qr) => prisma.credencial.findUnique({ where: { codigo_qr: qr } });
+    const punto = (nombre) => prisma.puntoAcceso.findFirst({ where: { nombre } });
+    const [joel, andrei, luis, entrada, edificio] = await Promise.all([
+      cred('QR-UP230571-XYZ'), cred('QR-UP230164-ABC'), cred('QR-UP229988-OLD'),
+      punto('Entrada Principal'), punto('Edificio A'),
+    ]);
+    await prisma.acceso.createMany({
+      data: [
+        { tipo_evento: 'ENTRADA', resultado: 'PERMITIDO', id_credencial: joel.id_credencial, id_punto: entrada.id_punto },
+        { tipo_evento: 'ENTRADA', resultado: 'PERMITIDO', id_credencial: andrei.id_credencial, id_punto: edificio.id_punto },
+        { tipo_evento: 'ENTRADA', resultado: 'DENEGADO', id_credencial: luis.id_credencial, id_punto: entrada.id_punto },
+      ],
+    });
+  }
+
   console.log('✅ Datos iniciales sembrados.');
-  console.log('   admin@upa.edu.mx / Admin123!');
-  console.log('   caseta@upa.edu.mx / Caseta123!');
+  console.log('   Admin:     admin@upa.edu.mx / Admin123!');
+  console.log('   Caseta:    caseta@upa.edu.mx / Caseta123!');
+  console.log('   Comunidad: matrícula o correo / Alumno123!  (ej. UP230571)');
 }
 
 main()

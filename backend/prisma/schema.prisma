@@ -33,6 +33,7 @@ model Usuario {
   apellidos          String         @db.VarChar(100)
   correo             String         @unique @db.VarChar(150)
   matricula_empleado String?        @unique @db.VarChar(50)
+  carrera            String?        @db.VarChar(150)
   password_hash      String         @db.VarChar(255)
   tipo               TipoUsuario
   estatus            EstatusUsuario @default(ACTIVO)
