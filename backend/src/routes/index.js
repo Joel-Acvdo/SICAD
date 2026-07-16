@@ -1,6 +1,11 @@
 // Enrutador principal de la API. Aquí se montan todos los módulos.
 const { Router } = require('express');
 const authRoutes = require('../modules/auth/auth.routes');
+const usuariosRoutes = require('../modules/usuarios/usuarios.routes');
+const credencialesRoutes = require('../modules/credenciales/credenciales.routes');
+const accesosRoutes = require('../modules/accesos/accesos.routes');
+const visitantesRoutes = require('../modules/visitantes/visitantes.routes');
+const puntosRoutes = require('../modules/puntos/puntos.routes');
 
 const router = Router();
 
@@ -9,12 +14,10 @@ router.get('/health', (_req, res) => {
 });
 
 router.use('/auth', authRoutes);
-
-// Próximos módulos (esquema ER ya listo en la base de datos):
-// router.use('/usuarios', usuariosRoutes);
-// router.use('/credenciales', credencialesRoutes);
-// router.use('/accesos', accesosRoutes);
-// router.use('/visitantes', visitantesRoutes);
-// router.use('/puntos', puntosRoutes);
+router.use('/usuarios', usuariosRoutes);
+router.use('/credenciales', credencialesRoutes);
+router.use('/accesos', accesosRoutes);
+router.use('/visitantes', visitantesRoutes);
+router.use('/puntos', puntosRoutes);
 
 module.exports = router;
