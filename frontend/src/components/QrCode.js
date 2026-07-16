@@ -2,11 +2,11 @@
 
 // ============================================================================
 // QrCode — Código QR REAL (escaneable) para la credencial digital.
-// Sirve como alternativa cuando el lector no tiene NFC: se escanea el QR.
+// Es el método de acceso: se escanea en la terminal de un punto de acceso.
 // Usa la librería qrcode.react; el valor codificado es el código de la credencial.
 //
 // Props:
-//   value -> texto que se codifica en el QR (ej. el codigo_nfc)
+//   value -> texto que se codifica en el QR (ej. el codigo_qr)
 //   size  -> tamaño del QR en px (sin contar el marco blanco)
 // ============================================================================
 import { QRCodeSVG } from 'qrcode.react';

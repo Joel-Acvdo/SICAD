@@ -2,7 +2,7 @@
 const { z } = require('zod');
 
 const loginSchema = z.object({
-  correo: z.string().email('Correo inválido'),
+  identificador: z.string().min(1, 'Ingresa tu correo o matrícula'),
   password: z.string().min(1, 'La contraseña es requerida'),
 });
 

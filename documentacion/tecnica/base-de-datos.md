@@ -1,10 +1,15 @@
 # Base de datos · SICAD
 
-Motor: **PostgreSQL**. El modelo se define en `backend/prisma/schema.prisma` y se despliega
-mediante migraciones de Prisma. En producción se monta sobre **Azure Database for PostgreSQL
-(Flexible Server)**.
+> [Documentación](../README.md) › Técnica ([índice](./README.md)) › **Base de datos** · Relacionado: [Arquitectura](./arquitectura.md) (frontend ↔ backend ↔ BD)
+
+Motor: **PostgreSQL**. El modelo se define en [`backend/prisma/schema.prisma`](../../backend/prisma/schema.prisma)
+y se despliega mediante migraciones de Prisma. Lo consume el **backend** vía Prisma ORM
+(ver [arquitectura.md](./arquitectura.md)). En producción se monta sobre **Azure Database for
+PostgreSQL (Flexible Server)**.
 
 ## Diagrama Entidad–Relación
+
+> También disponible como imagen: [`diagrama-er-sicad.png`](./diagrama-er-sicad.png).
 
 ```mermaid
 erDiagram
@@ -36,7 +41,7 @@ erDiagram
 
     CREDENCIAL {
         int id_credencial PK
-        varchar codigo_nfc UK "255, requerido"
+        varchar codigo_qr UK "255, requerido"
         enum estado "EstadoCredencial, default ACTIVA"
         timestamp fecha_emision "default now()"
         timestamp fecha_vencimiento "requerido"
@@ -114,12 +119,12 @@ erDiagram
 | fecha_registro | timestamp | default now() |
 | id_rol | int | FK → rol.id_rol |
 
-**credencial** — credencial digital NFC
+**credencial** — credencial digital con código QR
 
 | Columna | Tipo | Restricción |
 |---------|------|-------------|
 | id_credencial | serial | PK |
-| codigo_nfc | varchar(255) | UNIQUE, NOT NULL |
+| codigo_qr | varchar(255) | UNIQUE, NOT NULL |
 | estado | EstadoCredencial | default ACTIVA |
 | fecha_emision | timestamp | default now() |
 | fecha_vencimiento | timestamp | NOT NULL |

@@ -68,7 +68,7 @@ export default function BitacoraCaseta() {
           {filas.length === 0 && <p className="rounded-xl border border-platino-light bg-white px-4 py-6 text-center text-sm text-slate-400">Sin registros.</p>}
         </div>
 
-        <p className="mt-6 text-xs text-slate-400">La foto permite verificar la identidad de quien ingresa. Se registran los accesos por NFC y los manuales.</p>
+        <p className="mt-6 text-xs text-slate-400">La foto permite verificar la identidad de quien ingresa. Se registran los accesos por QR y los manuales.</p>
       </main>
     </div>
   );
