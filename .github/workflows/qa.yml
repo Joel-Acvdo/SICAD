@@ -1,0 +1,78 @@
+name: QA - Valida, despliega en el host local y promueve a main
+
+# ---------------------------------------------------------------------------
+# Pipeline 1 de 2. Se ejecuta al integrar en la rama `qa`:
+#   1) Corre en un RUNNER SELF-HOSTED (la laptop de QA, la de Issac).
+#   2) Valida (pruebas del backend) y DESPLIEGA la app en esa laptop con
+#      Docker Compose  → la laptop es el HOST de QA.
+#   3) Si todo pasa, abre un Pull Request `qa -> main` para que Issac (DevOps)
+#      lo apruebe. Al mergear ese PR se dispara deploy.yml (despliegue a Azure).
+#
+# Requisitos en la laptop del runner: Docker Desktop encendido, Node.js 20+ y Git.
+# Solo se dispara con push a `qa` (no con PRs de forks), por seguridad del runner.
+# ---------------------------------------------------------------------------
+on:
+  push:
+    branches: [qa]
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Job 1: corre en la laptop (self-hosted). Valida y despliega el host de QA.
+  # -------------------------------------------------------------------------
+  qa-host:
+    name: Validar y desplegar en el host de QA (laptop)
+    runs-on: [self-hosted, Windows]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Backend — instalar, generar Prisma y probar
+        working-directory: ./backend
+        run: |
+          npm ci
+          npx prisma generate
+          npm test
+        env:
+          JWT_SECRET: secreto_de_pruebas_ci
+          NODE_ENV: test
+
+      - name: Desplegar en el host de QA (Docker Compose)
+        run: docker compose up -d --build
+
+      - name: Smoke test — esperar a que el backend responda
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:4000/api/health >/dev/null; then
+              echo "✅ Host de QA arriba (backend responde)"; exit 0
+            fi
+            sleep 3
+          done
+          echo "❌ El backend no respondió en el host de QA"; exit 1
+
+  # -------------------------------------------------------------------------
+  # Job 2: corre en la nube de GitHub. Abre el PR qa -> main para DevOps.
+  # -------------------------------------------------------------------------
+  promover-a-main:
+    name: Abrir PR qa → main
+    needs: qa-host
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Abrir (o reutilizar) el PR hacia main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          abiertos=$(gh pr list --base main --head qa --state open --json number --jq 'length')
+          if [ "$abiertos" = "0" ]; then
+            gh pr create --base main --head qa \
+              --title "Release: qa → main" \
+              --body "PR automático del pipeline de QA: validado y desplegado en el host de QA (laptop). Requiere la aprobación de DevOps (Issac) para desplegar a Azure."
+          else
+            echo "Ya existe un PR abierto qa → main; no se crea otro."
+          fi
