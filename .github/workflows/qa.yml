@@ -28,7 +28,7 @@ jobs:
       run:
         shell: powershell
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Backend — instalar, generar Prisma y probar
         working-directory: ./backend
@@ -72,7 +72,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Abrir (o reutilizar) el PR hacia main
         env:

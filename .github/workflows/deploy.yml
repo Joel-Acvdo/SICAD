@@ -31,7 +31,7 @@ jobs:
     name: Construir y publicar imagenes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4   # descarga el codigo
+      - uses: actions/checkout@v5   # descarga el codigo
 
       - name: Login a GitHub Container Registry   # inicia sesion en ghcr.io
         uses: docker/login-action@v3
