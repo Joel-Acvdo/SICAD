@@ -1,0 +1,88 @@
+name: QA - Valida, despliega en el host local y promueve a main
+
+# ---------------------------------------------------------------------------
+# Pipeline 1 de 2. Se ejecuta al integrar en la rama `qa`:
+#   1) Corre en un RUNNER SELF-HOSTED (la laptop de QA).
+#   2) Valida (pruebas del backend) y DESPLIEGA la app con Docker Compose
+#      → la laptop es el HOST de QA.
+#   3) Si todo pasa, abre un Pull Request `qa -> main` para que Issac (DevOps)
+#      lo apruebe. Al mergear ese PR se dispara deploy.yml (despliegue a Azure).
+#
+# Los pasos del host usan PowerShell (siempre disponible en Windows). No usar
+# `shell: bash`: en un runner Windows resuelve al bash de WSL y falla si no hay
+# distro instalada.
+# Requisitos en la laptop: Docker Desktop encendido, Node.js y Git.
+# ---------------------------------------------------------------------------
+on:
+  push:
+    branches: [qa]
+
+jobs:
+  # -------------------------------------------------------------------------
+  # Job 1: corre en la laptop (self-hosted). Valida y despliega el host de QA.
+  # -------------------------------------------------------------------------
+  qa-host:
+    name: Validar y desplegar en el host de QA (laptop)
+    runs-on: [self-hosted, Windows]
+    defaults:
+      run:
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Backend — instalar, generar Prisma y probar
+        working-directory: ./backend
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw "npm ci fallo" }
+          npx prisma generate
+          if ($LASTEXITCODE -ne 0) { throw "prisma generate fallo" }
+          npm test
+          if ($LASTEXITCODE -ne 0) { throw "npm test fallo" }
+        env:
+          JWT_SECRET: secreto_de_pruebas_ci
+          NODE_ENV: test
+
+      - name: Desplegar en el host de QA (Docker Compose)
+        run: |
+          docker compose up -d --build
+          if ($LASTEXITCODE -ne 0) { throw "docker compose fallo" }
+
+      - name: Smoke test — esperar a que el backend responda
+        run: |
+          $ok = $false
+          for ($i = 0; $i -lt 30; $i++) {
+            try {
+              $r = Invoke-WebRequest -Uri "http://localhost:4000/api/health" -UseBasicParsing -TimeoutSec 5
+              if ($r.StatusCode -eq 200) { $ok = $true; break }
+            } catch { }
+            Start-Sleep -Seconds 3
+          }
+          if ($ok) { Write-Host "Host de QA arriba (backend responde)" }
+          else { Write-Error "El backend no respondio en el host de QA"; exit 1 }
+
+  # -------------------------------------------------------------------------
+  # Job 2: corre en la nube de GitHub. Abre el PR qa -> main para DevOps.
+  # -------------------------------------------------------------------------
+  promover-a-main:
+    name: Abrir PR qa → main
+    needs: qa-host
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Abrir (o reutilizar) el PR hacia main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          abiertos=$(gh pr list --base main --head qa --state open --json number --jq 'length')
+          if [ "$abiertos" = "0" ]; then
+            gh pr create --base main --head qa \
+              --title "Release: qa → main" \
+              --body "PR automático del pipeline de QA: validado y desplegado en el host de QA (laptop). Requiere la aprobación de DevOps (Issac) para desplegar a Azure."
+          else
+            echo "Ya existe un PR abierto qa → main; no se crea otro."
+          fi
