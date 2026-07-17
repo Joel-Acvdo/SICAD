@@ -14,9 +14,11 @@ env:
   # Imagenes en GitHub Container Registry (ghcr.io). El usuario/owner DEBE ir en minusculas.
   BACKEND_IMG:  ghcr.io/joel-acvdo/sicad-backend
   FRONTEND_IMG: ghcr.io/joel-acvdo/sicad-frontend
-  # Nombres de las Web Apps creadas en Azure (cambialos por los tuyos):
+  # Nombres de las Container Apps creadas en Azure (cambialos por los tuyos):
   AZURE_BACKEND_APP:  sicad-backend
   AZURE_FRONTEND_APP: sicad-frontend
+  # Grupo de recursos donde viven las Container Apps.
+  AZURE_RESOURCE_GROUP: rg-sicad
 
 # Permisos que necesita el workflow.
 permissions:
@@ -62,10 +64,10 @@ jobs:
             ${{ env.FRONTEND_IMG }}:${{ github.sha }}
 
   # -------------------------------------------------------------------------
-  # Job 2: desplegar las imagenes a Azure App Service
+  # Job 2: desplegar las imagenes a Azure Container Apps
   # -------------------------------------------------------------------------
   deploy:
-    name: Desplegar a Azure App Service
+    name: Desplegar a Azure Container Apps
     needs: build-push               # espera a que las imagenes esten publicadas
     runs-on: ubuntu-latest
     steps:
@@ -74,14 +76,24 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}  # secreto que tu creas y pegas en GitHub
 
-      - name: Desplegar backend      # actualiza la Web App del backend con su imagen
-        uses: azure/webapps-deploy@v3
+      - name: Desplegar backend      # actualiza la Container App del backend con su imagen
+        uses: azure/cli@v2
         with:
-          app-name: ${{ env.AZURE_BACKEND_APP }}
-          images: ${{ env.BACKEND_IMG }}:${{ github.sha }}
+          azcliversion: latest
+          inlineScript: |
+            az config set extension.use_dynamic_install=yes_without_prompt
+            az containerapp update \
+              --name ${{ env.AZURE_BACKEND_APP }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --image ${{ env.BACKEND_IMG }}:${{ github.sha }}
 
-      - name: Desplegar frontend     # actualiza la Web App del frontend con su imagen
-        uses: azure/webapps-deploy@v3
+      - name: Desplegar frontend     # actualiza la Container App del frontend con su imagen
+        uses: azure/cli@v2
         with:
-          app-name: ${{ env.AZURE_FRONTEND_APP }}
-          images: ${{ env.FRONTEND_IMG }}:${{ github.sha }}
+          azcliversion: latest
+          inlineScript: |
+            az config set extension.use_dynamic_install=yes_without_prompt
+            az containerapp update \
+              --name ${{ env.AZURE_FRONTEND_APP }} \
+              --resource-group ${{ env.AZURE_RESOURCE_GROUP }} \
+              --image ${{ env.FRONTEND_IMG }}:${{ github.sha }}
