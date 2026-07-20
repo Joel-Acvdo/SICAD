@@ -6,26 +6,24 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useDispatch, useSelector } from 'react-redux';
 import { login, limpiarError } from '@/store/authSlice';
-import { cargarUsuarios } from '@/store/userSlice';
 import Logo from '@/components/Logo';
 import Campo from '@/components/Campo';
 
 const areas = [
-  { id: 'caseta', nombre: 'Personal de Caseta', demo: 'caseta@upa.edu.mx' },
-  { id: 'escolares', nombre: 'Servicios Escolares', demo: 'admin@upa.edu.mx' },
+  { id: 'caseta', nombre: 'Personal de Caseta', demo: 'caseta@upa.edu.mx', pass: 'Caseta123!' },
+  { id: 'escolares', nombre: 'Servicios Escolares', demo: 'admin@upa.edu.mx', pass: 'Admin123!' },
 ];
 
 export default function LoginAdmin() {
   const dispatch = useDispatch();
   const router = useRouter();
-  const { usuario, error } = useSelector((s) => s.auth);
+  const { usuario, error, cargando } = useSelector((s) => s.auth);
 
   const [area, setArea] = useState('escolares');
   const [identificador, setIdentificador] = useState('');
   const [password, setPassword] = useState('');
 
   useEffect(() => {
-    dispatch(cargarUsuarios());
     dispatch(limpiarError());
   }, [dispatch]);
 
@@ -41,7 +39,7 @@ export default function LoginAdmin() {
     dispatch(login({ identificador, password }));
   };
 
-  const demoActual = areas.find((a) => a.id === area).demo;
+  const areaActual = areas.find((a) => a.id === area);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-marino-dark to-marino p-4">
@@ -70,7 +68,7 @@ export default function LoginAdmin() {
             label="Usuario o correo"
             value={identificador}
             onChange={(e) => setIdentificador(e.target.value)}
-            placeholder={demoActual}
+            placeholder={areaActual.demo}
             required
           />
           <Campo
@@ -88,9 +86,10 @@ export default function LoginAdmin() {
 
           <button
             type="submit"
-            className="w-full rounded-xl bg-azulmedio py-3 font-bold text-white shadow transition hover:bg-marino active:scale-95"
+            disabled={cargando}
+            className="w-full rounded-xl bg-azulmedio py-3 font-bold text-white shadow transition hover:bg-marino active:scale-95 disabled:opacity-60"
           >
-            Ingresar
+            {cargando ? 'Ingresando…' : 'Ingresar'}
           </button>
         </form>
 
@@ -99,7 +98,7 @@ export default function LoginAdmin() {
         </Link>
 
         <p className="mt-6 text-center text-xs text-slate-400">
-          Demo: <span className="font-mono">{demoActual}</span> · cualquier contraseña
+          Demo: <span className="font-mono">{areaActual.demo}</span> · <span className="font-mono">{areaActual.pass}</span>
         </p>
       </div>
     </main>
