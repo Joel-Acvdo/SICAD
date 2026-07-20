@@ -14,6 +14,9 @@ router.get('/', autorizar('Administrador', 'Seguridad'), controller.listar);
 // GET   /api/credenciales/mia            → credencial del usuario autenticado
 router.get('/mia', controller.mia);
 
+// PATCH /api/credenciales/mia/perdida    → el usuario reporta su credencial perdida (la revoca)
+router.patch('/mia/perdida', controller.reportarPerdida);
+
 // PATCH /api/credenciales/usuario/:id/vigencia → renueva la vigencia (Administrador)
 router.patch('/usuario/:id/vigencia', autorizar('Administrador'), validar(renovarSchema), controller.renovar);
 

@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '@/store/authSlice';
 import { cargarUsuarios, cambiarEstatusUsuario } from '@/store/userSlice';
-import { cargarAccesosYCredenciales, cambiarEstadoCredencial, renovarVigencia } from '@/store/accessSlice';
+import { cargarAccesosYCredenciales, renovarVigencia } from '@/store/accessSlice';
 import TopBar from '@/components/TopBar';
 import Badge from '@/components/Badge';
 import Modal from '@/components/Modal';
@@ -65,22 +65,21 @@ export default function GestionUsuarios() {
   });
 
   // Acciones
-  const revocar = (u) => {
-    dispatch(cambiarEstatusUsuario({ id_usuario: u.id_usuario, estatus: 'SUSPENDIDO' }));
-    dispatch(cambiarEstadoCredencial({ id_usuario: u.id_usuario, estado: 'REVOCADA' }));
+  // Al revocar/activar, el backend revoca/activa la credencial EN CASCADA;
+  // por eso refrescamos las credenciales después de cambiar el estatus.
+  const revocar = async (u) => {
+    await dispatch(cambiarEstatusUsuario({ id_usuario: u.id_usuario, estatus: 'SUSPENDIDO' }));
+    dispatch(cargarAccesosYCredenciales());
     setModal(null);
   };
-  const activar = (u) => {
-    dispatch(cambiarEstatusUsuario({ id_usuario: u.id_usuario, estatus: 'ACTIVO' }));
-    dispatch(cambiarEstadoCredencial({ id_usuario: u.id_usuario, estado: 'ACTIVA' }));
-    setModal({ tipo: 'activado', usuario: u });
+  const activar = async (u) => {
+    await dispatch(cambiarEstatusUsuario({ id_usuario: u.id_usuario, estatus: 'ACTIVO' }));
+    dispatch(cargarAccesosYCredenciales());
+    setModal({ tipo: 'activado', usuario: { ...u, estatus: 'ACTIVO' } });
   };
-  // Aplica la renovación: suma "meses" a la vigencia actual y actualiza la credencial.
+  // Aplica la renovación: el backend suma "meses" a la vigencia de la credencial.
   const renovar = (u, meses = 12) => {
-    const c = credDe(u.id_usuario);
-    const base = c ? new Date(c.fecha_vencimiento) : new Date();
-    base.setMonth(base.getMonth() + meses);
-    dispatch(renovarVigencia({ id_usuario: u.id_usuario, fecha_vencimiento: base.toISOString() }));
+    dispatch(renovarVigencia({ id_usuario: u.id_usuario, meses }));
     setModal(null);
   };
 

@@ -5,8 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '@/store/authSlice';
-import { cargarUsuarios } from '@/store/userSlice';
-import { cargarAccesosYCredenciales, cambiarEstadoCredencial } from '@/store/accessSlice';
+import { cargarMiCredencial, reportarPerdida } from '@/store/accessSlice';
 import TopBar from '@/components/TopBar';
 import Badge from '@/components/Badge';
 import Modal from '@/components/Modal';
@@ -26,14 +25,13 @@ export default function CredencialDigital() {
   const router = useRouter();
   const dispatch = useDispatch();
   const { usuario } = useSelector((s) => s.auth);
-  const { credenciales, accesos, inicializado } = useSelector((s) => s.access);
+  const { miCredencial, misAccesos, inicializado } = useSelector((s) => s.access);
 
   const [modalPerdida, setModalPerdida] = useState(false);
   const [mostrarQR, setMostrarQR] = useState(false);
 
   useEffect(() => {
-    dispatch(cargarUsuarios());
-    dispatch(cargarAccesosYCredenciales());
+    dispatch(cargarMiCredencial());
   }, [dispatch]);
 
   useEffect(() => {
@@ -48,12 +46,11 @@ export default function CredencialDigital() {
     );
   }
 
-  const cred = credenciales.find((c) => c.id_usuario === usuario.id_usuario) || {
+  const cred = miCredencial || {
     codigo_qr: 'NO-ASIGNADO',
     estado: 'INACTIVA',
     fecha_vencimiento: new Date().toISOString(),
   };
-  const misAccesos = accesos.filter((a) => a.id_usuario === usuario.id_usuario);
   const tono = cred.estado === 'ACTIVA' ? 'verde' : cred.estado === 'REVOCADA' ? 'rojo' : 'neutro';
 
   const salir = () => {
@@ -61,7 +58,7 @@ export default function CredencialDigital() {
     router.push('/login');
   };
   const confirmarPerdida = () => {
-    dispatch(cambiarEstadoCredencial({ id_usuario: usuario.id_usuario, estado: 'REVOCADA' }));
+    dispatch(reportarPerdida());
     setModalPerdida(false);
   };
 

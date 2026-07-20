@@ -9,8 +9,7 @@ import { useState, useEffect } from 'react'; // hooks de React (estado y efectos
 import { useRouter } from 'next/navigation'; // para redirigir entre páginas (Next.js)
 import Link from 'next/link'; // enlaces internos sin recargar la página
 import { useDispatch, useSelector } from 'react-redux'; // leer/escribir el estado global
-import { login, limpiarError } from '@/store/authSlice'; // actions de la sesión
-import { cargarUsuarios } from '@/store/userSlice'; // carga los usuarios (para poder validar el login)
+import { login, limpiarError } from '@/store/authSlice'; // actions de la sesión (login real vía API)
 import Logo from '@/components/Logo'; // logo SICAD reutilizable
 import Campo from '@/components/Campo'; // input etiquetado reutilizable
 
@@ -18,15 +17,14 @@ export default function LoginAlumnos() {
   const dispatch = useDispatch(); // dispatch(action) -> modifica el estado global
   const router = useRouter(); // router.push('/ruta') -> navega
   // useSelector lee de la rama "auth" del store: el usuario logueado y el error.
-  const { usuario, error } = useSelector((s) => s.auth);
+  const { usuario, error, cargando } = useSelector((s) => s.auth);
 
   // Estado LOCAL del formulario (solo vive en esta página).
   const [identificador, setIdentificador] = useState('');
   const [password, setPassword] = useState('');
 
-  // Efecto al montar: siembra los usuarios de ejemplo y limpia errores viejos.
+  // Efecto al montar: limpia errores viejos del login.
   useEffect(() => {
-    dispatch(cargarUsuarios());
     dispatch(limpiarError());
   }, [dispatch]);
 
@@ -58,8 +56,8 @@ export default function LoginAlumnos() {
           {/* El error viene del estado global (authSlice) si el usuario no existe. */}
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-rojo">{error}</p>}
 
-          <button type="submit" className="w-full rounded-xl bg-azulmedio py-3 font-bold text-white shadow transition hover:bg-marino active:scale-95">
-            Iniciar sesión
+          <button type="submit" disabled={cargando} className="w-full rounded-xl bg-azulmedio py-3 font-bold text-white shadow transition hover:bg-marino active:scale-95 disabled:opacity-60">
+            {cargando ? 'Ingresando…' : 'Iniciar sesión'}
           </button>
         </form>
 
@@ -68,7 +66,7 @@ export default function LoginAlumnos() {
         </Link>
 
         <p className="mt-6 text-center text-xs text-slate-400">
-          Demo: <span className="font-mono">UP230571</span> · cualquier contraseña
+          Demo: <span className="font-mono">UP230571</span> · <span className="font-mono">Alumno123!</span>
         </p>
       </div>
     </main>
