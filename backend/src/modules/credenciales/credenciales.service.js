@@ -29,4 +29,14 @@ async function renovarVigencia(id_usuario, meses) {
   });
 }
 
-module.exports = { listar, miCredencial, renovarVigencia };
+// El usuario reporta SU credencial como perdida → se revoca de inmediato.
+async function reportarPerdida(id_usuario) {
+  const cred = await prisma.credencial.findFirst({ where: { id_usuario } });
+  if (!cred) throw ApiError.notFound('No tienes una credencial asignada');
+  return prisma.credencial.update({
+    where: { id_credencial: cred.id_credencial },
+    data: { estado: 'REVOCADA' },
+  });
+}
+
+module.exports = { listar, miCredencial, renovarVigencia, reportarPerdida };
