@@ -4,8 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
-import { cargarUsuarios, agregarUsuario } from '@/store/userSlice';
-import { cambiarEstadoCredencial } from '@/store/accessSlice';
+import { agregarUsuario } from '@/store/userSlice';
 import TopBar from '@/components/TopBar';
 import Campo from '@/components/Campo';
 
@@ -15,26 +14,25 @@ export default function NuevoUsuario() {
   const router = useRouter();
   const dispatch = useDispatch();
   const { usuario } = useSelector((s) => s.auth);
-  const { lista } = useSelector((s) => s.users);
 
   const [f, setF] = useState({ nombre: '', apellidos: '', correo: '', matricula_empleado: '', carrera: '', tipo: 'ALUMNO' });
 
-  useEffect(() => {
-    dispatch(cargarUsuarios());
-  }, [dispatch]);
   useEffect(() => {
     if (usuario && usuario.tipo !== 'ADMINISTRATIVO') router.push('/login-admin');
   }, [usuario, router]);
 
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
-  const guardar = (e) => {
+  const guardar = async (e) => {
     e.preventDefault();
     if (!f.nombre || !f.apellidos || !f.correo) return;
-    const nextId = lista.length ? Math.max(...lista.map((u) => u.id_usuario)) + 1 : 1;
-    dispatch(agregarUsuario(f));
-    dispatch(cambiarEstadoCredencial({ id_usuario: nextId, estado: 'ACTIVA' })); // emite la credencial digital
-    router.push('/admin/usuarios');
+    try {
+      // El backend crea el usuario Y emite su credencial automáticamente.
+      await dispatch(agregarUsuario(f)).unwrap();
+      router.push('/admin/usuarios');
+    } catch {
+      // si falla (ej. correo duplicado) no navega; el error queda en el estado.
+    }
   };
 
   return (
