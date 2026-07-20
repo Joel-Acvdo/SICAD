@@ -13,34 +13,37 @@ async function obtenerStats() {
   hace7.setDate(hace7.getDate() - 6); // ventana de 7 días (incluye hoy)
 
   const [
-    usuariosPorTipo,
+    usuariosPorTipoEstatus,
     credencialesPorEstado,
     accesosHoy,
-    visitantesVigentes,
+    visitantesPorEstatus,
     usuariosActivos,
-    credencialesActivas,
-    accesosPorPunto,
-    puntos,
+    credencialesVigentes,
     accesos7,
   ] = await Promise.all([
-    prisma.usuario.groupBy({ by: ['tipo'], _count: { _all: true } }),
+    prisma.usuario.groupBy({ by: ['tipo', 'estatus'], _count: { _all: true } }),
     prisma.credencial.groupBy({ by: ['estado'], _count: { _all: true } }),
     prisma.acceso.groupBy({ by: ['resultado'], where: { fecha_hora: { gte: hoyInicio } }, _count: { _all: true } }),
-    prisma.visitante.count({ where: { estatus: 'VIGENTE' } }),
+    prisma.visitante.groupBy({ by: ['estatus'], _count: { _all: true } }),
     prisma.usuario.count({ where: { estatus: 'ACTIVO' } }),
     prisma.credencial.count({ where: { estado: 'ACTIVA' } }),
-    prisma.acceso.groupBy({ by: ['id_punto'], _count: { _all: true } }),
-    prisma.puntoAcceso.findMany({ select: { id_punto: true, nombre: true } }),
     prisma.acceso.findMany({ where: { fecha_hora: { gte: hace7 } }, select: { fecha_hora: true } }),
   ]);
 
   // KPIs de accesos de hoy
   const permitidosHoy = accesosHoy.find((a) => a.resultado === 'PERMITIDO')?._count._all || 0;
   const denegadosHoy = accesosHoy.find((a) => a.resultado === 'DENEGADO')?._count._all || 0;
+  const visitantesVigentes = visitantesPorEstatus.find((v) => v.estatus === 'VIGENTE')?._count._all || 0;
 
-  // Accesos por punto de acceso (mapea id → nombre)
-  const nombrePunto = Object.fromEntries(puntos.map((p) => [p.id_punto, p.nombre]));
-  const porPunto = accesosPorPunto.map((a) => ({ nombre: nombrePunto[a.id_punto] || 'Sin punto', total: a._count._all }));
+  // Usuarios por tipo, con desglose activos / inactivos (pivot del groupBy).
+  const porTipo = {};
+  for (const r of usuariosPorTipoEstatus) {
+    if (!porTipo[r.tipo]) porTipo[r.tipo] = { tipo: r.tipo, activos: 0, inactivos: 0, total: 0 };
+    const n = r._count._all;
+    porTipo[r.tipo].total += n;
+    if (r.estatus === 'ACTIVO') porTipo[r.tipo].activos += n;
+    else porTipo[r.tipo].inactivos += n;
+  }
 
   // Accesos por día (últimos 7): se inicializan los 7 días y se cuentan en JS.
   const dias = [];
@@ -61,13 +64,13 @@ async function obtenerStats() {
       accesosHoy: permitidosHoy + denegadosHoy,
       permitidosHoy,
       denegadosHoy,
-      credencialesActivas,
+      credencialesVigentes,
       visitantesVigentes,
     },
-    usuariosPorTipo: usuariosPorTipo.map((u) => ({ tipo: u.tipo, total: u._count._all })),
+    usuariosPorTipo: Object.values(porTipo),
     credencialesPorEstado: credencialesPorEstado.map((c) => ({ estado: c.estado, total: c._count._all })),
-    accesosPorPunto: porPunto,
     accesosPorDia: dias,
+    visitantesPorEstatus: visitantesPorEstatus.map((v) => ({ estatus: v.estatus, total: v._count._all })),
   };
 }
 
