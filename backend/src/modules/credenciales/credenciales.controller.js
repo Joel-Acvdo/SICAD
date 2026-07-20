@@ -26,4 +26,12 @@ async function renovar(req, res, next) {
   }
 }
 
-module.exports = { listar, mia, renovar };
+async function reportarPerdida(req, res, next) {
+  try {
+    res.status(200).json({ credencial: await service.reportarPerdida(req.usuario.id) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listar, mia, renovar, reportarPerdida };
