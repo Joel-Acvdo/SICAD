@@ -30,7 +30,19 @@ export default function RegistrarExterno() {
   const guardar = (e) => {
     e.preventDefault();
     if (!f.nombre || !f.identificacion) return;
-    dispatch(registrarVisitante({ ...f, fecha_inicio: new Date().toISOString() }));
+    const inicio = new Date();
+    // Si no capturaron "válido hasta", el pase dura 8 horas por defecto.
+    const fin = f.fecha_fin ? new Date(f.fecha_fin) : new Date(inicio.getTime() + 8 * 60 * 60 * 1000);
+    dispatch(
+      registrarVisitante({
+        nombre: f.nombre,
+        identificacion: f.identificacion,
+        empresa: f.empresa,
+        motivo: f.motivo,
+        fecha_inicio: inicio.toISOString(),
+        fecha_fin: fin.toISOString(),
+      })
+    );
     setOk(true);
     setTimeout(() => router.push('/caseta/bitacora'), 1400);
   };
