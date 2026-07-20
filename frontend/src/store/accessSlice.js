@@ -1,17 +1,17 @@
 // ============================================================================
-// accessSlice.js — Rama "access" del estado global. Agrupa tres cosas
-// relacionadas con el control de acceso:
-//   - credenciales: las credenciales digitales (QR) de cada usuario y su estado.
-//   - accesos:      la BITÁCORA de eventos de entrada/salida.
-//   - visitantes:   los externos (visitantes/proveedores) con pase temporal.
-// Modo demo: todo se guarda en localStorage (aún no hay backend conectado).
+// accessSlice.js — Rama "access" del estado global. Agrupa:
+//   - miCredencial / misAccesos: la credencial y el historial del ALUMNO
+//     autenticado — CONECTADOS AL BACKEND (Axios).
+//   - credenciales / accesos / visitantes: listados de admin y caseta.
+//     (Todavía en localStorage; se conectan en el siguiente paso.)
 // ============================================================================
 
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import api from '@/lib/api';
 
-const SEED_VERSION = '4'; // súbelo para reiniciar los datos de ejemplo
+const SEED_VERSION = '4'; // súbelo para reiniciar los datos de ejemplo (admin/caseta)
 
-// --- Datos de ejemplo -----------------------------------------------------
+// --- Datos de ejemplo (admin/caseta, aún locales) -------------------------
 const credencialesSeed = [
   { id_credencial: 1, codigo_qr: 'QR-UP230571-XYZ', estado: 'ACTIVA', fecha_emision: '2026-01-15T09:00:00.000Z', fecha_vencimiento: '2026-12-31T23:59:59.000Z', id_usuario: 1 },
   { id_credencial: 2, codigo_qr: 'QR-UP230164-ABC', estado: 'ACTIVA', fecha_emision: '2026-01-15T09:10:00.000Z', fecha_vencimiento: '2026-12-31T23:59:59.000Z', id_usuario: 2 },
@@ -36,9 +36,52 @@ function set(key, val) {
   if (typeof window !== 'undefined') localStorage.setItem(key, JSON.stringify(val));
 }
 
+// --- Thunks conectados al BACKEND (flujo del alumno) ----------------------
+// cargarMiCredencial: trae la credencial propia (/credenciales/mia) y el
+// historial propio (/accesos/mios) del usuario autenticado.
+export const cargarMiCredencial = createAsyncThunk(
+  'access/cargarMiCredencial',
+  async (_, { rejectWithValue }) => {
+    try {
+      const [cred, acc] = await Promise.all([
+        api.get('/credenciales/mia'),
+        api.get('/accesos/mios'),
+      ]);
+      return { credencial: cred.data.credencial, accesos: acc.data.accesos };
+    } catch (err) {
+      // 404 = el usuario aún no tiene credencial asignada (no es un error grave).
+      if (err.response?.status === 404) return { credencial: null, accesos: [] };
+      return rejectWithValue(err.response?.data?.error || 'No se pudo cargar tu credencial.');
+    }
+  }
+);
+
+// reportarPerdida: el alumno reporta SU credencial como perdida → se revoca.
+export const reportarPerdida = createAsyncThunk(
+  'access/reportarPerdida',
+  async (_, { rejectWithValue }) => {
+    try {
+      const { data } = await api.patch('/credenciales/mia/perdida');
+      return data.credencial;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error || 'No se pudo reportar la pérdida.');
+    }
+  }
+);
+
 const accessSlice = createSlice({
   name: 'access', // rama state.access
-  initialState: { credenciales: [], accesos: [], visitantes: [], inicializado: false },
+  initialState: {
+    // Alumno (backend)
+    miCredencial: null,
+    misAccesos: [],
+    cargandoMia: false,
+    // Admin/caseta (localStorage, por ahora)
+    credenciales: [],
+    accesos: [],
+    visitantes: [],
+    inicializado: false,
+  },
   reducers: {
     // cargarAccesosYCredenciales: llena las tres listas (resiembra si cambió la versión).
     cargarAccesosYCredenciales: (state) => {
@@ -60,10 +103,9 @@ const accessSlice = createSlice({
       state.inicializado = true;
     },
     // registrarAcceso: agrega un evento a la bitácora (lo pone al inicio = más reciente).
-    // Lo usan la terminal /acceso y la validación manual de caseta.
     registrarAcceso: (state, action) => {
       const nuevo = {
-        ...action.payload, // { tipo_evento, resultado, punto_nombre, id_usuario }
+        ...action.payload,
         id_acceso: state.accesos.length ? Math.max(...state.accesos.map((a) => a.id_acceso)) + 1 : 1,
         fecha_hora: new Date().toISOString(),
       };
@@ -71,7 +113,6 @@ const accessSlice = createSlice({
       set('sicad_accesos', state.accesos);
     },
     // cambiarEstadoCredencial: pone la credencial de un usuario en ACTIVA/REVOCADA/etc.
-    // Si el usuario aún no tiene credencial, se la crea (así se "emite" al dar de alta).
     cambiarEstadoCredencial: (state, action) => {
       const { id_usuario, estado } = action.payload;
       const i = state.credenciales.findIndex((c) => c.id_usuario === id_usuario);
@@ -109,6 +150,25 @@ const accessSlice = createSlice({
       state.visitantes.unshift(nuevo);
       set('sicad_visitantes', state.visitantes);
     },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(cargarMiCredencial.pending, (state) => {
+        state.cargandoMia = true;
+      })
+      .addCase(cargarMiCredencial.fulfilled, (state, action) => {
+        state.cargandoMia = false;
+        state.miCredencial = action.payload.credencial;
+        state.misAccesos = action.payload.accesos;
+        state.inicializado = true;
+      })
+      .addCase(cargarMiCredencial.rejected, (state) => {
+        state.cargandoMia = false;
+        state.inicializado = true;
+      })
+      .addCase(reportarPerdida.fulfilled, (state, action) => {
+        state.miCredencial = action.payload;
+      });
   },
 });
 
