@@ -61,28 +61,25 @@ export default function Dashboard() {
       .finally(() => setCargando(false));
   }, []);
 
-  // Serializa el SVG de la gráfica actual a PNG (fiable con SVG, a diferencia de un screenshot).
-  const graficaAImg = async () => {
-    const svg = document.querySelector('#grafica-principal svg');
-    if (!svg) return null;
-    const rect = svg.getBoundingClientRect();
-    const xml = new XMLSerializer().serializeToString(svg);
-    const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
-    const img = new Image();
-    await new Promise((res, rej) => {
-      img.onload = res;
-      img.onerror = rej;
-      img.src = url;
+  // Dibuja una gráfica de barras horizontales NATIVA en el PDF (fiable, sin capturar SVG).
+  const dibujarBarras = (pdf, datos, x, y, ancho, color) => {
+    const max = Math.max(1, ...datos.map((d) => d.value));
+    const barH = 6;
+    const gap = 3.5;
+    const labelW = 42;
+    const barMaxW = ancho - labelW - 16;
+    datos.forEach((d) => {
+      pdf.setFontSize(9);
+      pdf.setTextColor(70);
+      pdf.text(String(d.label), x, y + barH - 1.5, { maxWidth: labelW - 2 });
+      const bw = Math.max(0.6, (d.value / max) * barMaxW);
+      pdf.setFillColor(color[0], color[1], color[2]);
+      pdf.roundedRect(x + labelW, y, bw, barH, 1, 1, 'F');
+      pdf.setTextColor(40);
+      pdf.text(String(d.value), x + labelW + bw + 2, y + barH - 1.5);
+      y += barH + gap;
     });
-    const escala = 2;
-    const canvas = document.createElement('canvas');
-    canvas.width = (rect.width || 500) * escala;
-    canvas.height = (rect.height || 260) * escala;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return { data: canvas.toDataURL('image/png'), w: rect.width || 500, h: rect.height || 260 };
+    return y;
   };
 
   // Construye el PDF con jsPDF + autotable: encabezado de color, KPIs, gráfica y
@@ -113,16 +110,23 @@ export default function Dashboard() {
         `Usuarios activos: ${k.usuariosActivos}     Accesos hoy: ${k.accesosHoy}     Credenciales vigentes: ${k.credencialesVigentes}     Visitantes vigentes: ${k.visitantesVigentes}`,
         14, y
       );
-      y += 8;
+      y += 9;
 
-      // Gráfica seleccionada (centrada)
-      const chart = await graficaAImg();
-      if (chart) {
-        const imgW = 130;
-        const imgH = (chart.h * imgW) / chart.w;
-        pdf.addImage(chart.data, 'PNG', (w - imgW) / 2, y, imgW, imgH);
-        y += imgH + 6;
-      }
+      // Gráfica (barras nativas) de la métrica seleccionada
+      pdf.setFontSize(12);
+      pdf.setTextColor(20, 39, 78);
+      pdf.text(METRICAS[metrica].grafica, 14, y);
+      y += 6;
+      const datosGraf =
+        metrica === 'usuarios'
+          ? stats.usuariosPorTipo.map((u) => ({ label: u.tipo, value: filtro === 'activos' ? u.activos : filtro === 'inactivos' ? u.inactivos : u.total }))
+          : metrica === 'accesos'
+            ? stats.accesosPorDia.map((d) => ({ label: d.fecha.slice(5), value: d.total }))
+            : metrica === 'credenciales'
+              ? stats.credencialesPorEstado.map((c) => ({ label: c.estado, value: c.total }))
+              : stats.visitantesPorEstatus.map((v) => ({ label: v.estatus, value: v.total }));
+      y = dibujarBarras(pdf, datosGraf, 14, y, w - 28, [63, 114, 191]);
+      y += 6;
 
       const nombre = (u) => `${u.nombre} ${u.apellidos}`;
       const fmt = (d) => (d ? new Date(d).toLocaleDateString('es-MX') : '—');
