@@ -15,6 +15,7 @@ import {
   XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer,
 } from 'recharts';
 import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import api from '@/lib/api';
 import TopBar from '@/components/TopBar';
 
@@ -36,6 +37,8 @@ export default function Dashboard() {
   const { usuario } = useSelector((s) => s.auth);
 
   const [stats, setStats] = useState(null);
+  const [usuarios, setUsuarios] = useState([]);
+  const [visitantes, setVisitantes] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
   const [generando, setGenerando] = useState(false);
@@ -48,9 +51,12 @@ export default function Dashboard() {
     if (usuario && usuario.tipo !== 'ADMINISTRATIVO') router.push('/login-admin');
   }, [usuario, router]);
   useEffect(() => {
-    api
-      .get('/stats')
-      .then((res) => setStats(res.data))
+    Promise.all([api.get('/stats'), api.get('/usuarios'), api.get('/visitantes')])
+      .then(([s, u, v]) => {
+        setStats(s.data);
+        setUsuarios(u.data.usuarios);
+        setVisitantes(v.data.visitantes);
+      })
       .catch((e) => setError(e.response?.data?.error || 'No se pudieron cargar las estadísticas.'))
       .finally(() => setCargando(false));
   }, []);
@@ -79,87 +85,70 @@ export default function Dashboard() {
     return { data: canvas.toDataURL('image/png'), w: rect.width || 500, h: rect.height || 260 };
   };
 
-  // Construye el PDF con jsPDF: encabezado + KPIs + tabla + la gráfica seleccionada.
+  // Construye el PDF con jsPDF + autotable: encabezado de color, KPIs, gráfica y
+  // tablas (usuarios vigentes / no vigentes y visitantes vigentes).
   const descargarPDF = async () => {
     setGenerando(true);
     try {
       const pdf = new jsPDF('p', 'mm', 'a4');
       const w = pdf.internal.pageSize.getWidth();
-      let y = 16;
 
+      // Encabezado con barra azul marino
+      pdf.setFillColor(20, 39, 78);
+      pdf.rect(0, 0, w, 24, 'F');
+      pdf.setTextColor(255);
       pdf.setFontSize(16);
-      pdf.setTextColor(20, 39, 78);
-      pdf.text('SICAD — Reporte del Dashboard', 14, y);
-      y += 6;
-      pdf.setFontSize(10);
-      pdf.setTextColor(110);
-      pdf.text(`Servicios Escolares · ${new Date().toLocaleString('es-MX')}`, 14, y);
-      y += 9;
+      pdf.text('SICAD — Reporte del Dashboard', 14, 12);
+      pdf.setFontSize(9);
+      pdf.setTextColor(200, 210, 230);
+      pdf.text(`Servicios Escolares · ${new Date().toLocaleString('es-MX')}`, 14, 18);
 
-      // KPIs
-      pdf.setFontSize(12);
-      pdf.setTextColor(20, 39, 78);
-      pdf.text('Indicadores', 14, y);
-      y += 6;
+      let y = 32;
+
+      // Resumen de KPIs
+      const k = stats.kpis;
       pdf.setFontSize(10);
       pdf.setTextColor(40);
-      const k = stats.kpis;
-      [
-        `Usuarios activos: ${k.usuariosActivos}`,
-        `Accesos hoy: ${k.accesosHoy}  (${k.permitidosHoy} permitidos, ${k.denegadosHoy} denegados)`,
-        `Credenciales vigentes: ${k.credencialesVigentes}`,
-        `Visitantes vigentes: ${k.visitantesVigentes}`,
-      ].forEach((l) => {
-        pdf.text('•  ' + l, 16, y);
-        y += 5.5;
-      });
-      y += 4;
+      pdf.text(
+        `Usuarios activos: ${k.usuariosActivos}     Accesos hoy: ${k.accesosHoy}     Credenciales vigentes: ${k.credencialesVigentes}     Visitantes vigentes: ${k.visitantesVigentes}`,
+        14, y
+      );
+      y += 8;
 
-      // Gráfica seleccionada (embebida como imagen del SVG)
+      // Gráfica seleccionada (centrada)
       const chart = await graficaAImg();
-      pdf.setFontSize(12);
-      pdf.setTextColor(20, 39, 78);
-      pdf.text(`Gráfica: ${METRICAS[metrica].grafica}`, 14, y);
-      y += 5;
       if (chart) {
-        const imgW = w - 28;
+        const imgW = 130;
         const imgH = (chart.h * imgW) / chart.w;
-        pdf.addImage(chart.data, 'PNG', 14, y, imgW, imgH);
+        pdf.addImage(chart.data, 'PNG', (w - imgW) / 2, y, imgW, imgH);
         y += imgH + 6;
       }
 
-      // Tabla de datos de la métrica seleccionada (texto)
-      pdf.setFontSize(10);
-      pdf.setTextColor(40);
-      const filas = tablaDatos();
-      filas.forEach((f) => {
-        pdf.text(f, 16, y);
-        y += 5;
-        if (y > 280) {
-          pdf.addPage();
-          y = 16;
-        }
-      });
+      const nombre = (u) => `${u.nombre} ${u.apellidos}`;
+      const fmt = (d) => (d ? new Date(d).toLocaleDateString('es-MX') : '—');
+      const vigentes = usuarios.filter((u) => u.estatus === 'ACTIVO');
+      const noVigentes = usuarios.filter((u) => u.estatus !== 'ACTIVO');
+      const visitVigentes = visitantes.filter((v) => v.estatus === 'VIGENTE');
+
+      const tabla = (head, body, fill, startY) =>
+        autoTable(pdf, {
+          startY,
+          head: [head],
+          body: body.length ? body : [['— Sin registros —', ...head.slice(1).map(() => '')]],
+          theme: 'striped',
+          headStyles: { fillColor: fill, fontStyle: 'bold' },
+          styles: { fontSize: 9, cellPadding: 2.5 },
+          margin: { left: 14, right: 14 },
+        });
+
+      tabla(['Usuarios vigentes', 'Tipo', 'Matrícula'], vigentes.map((u) => [nombre(u), u.tipo, u.matricula_empleado || '—']), [22, 163, 74], y);
+      tabla(['Usuarios NO vigentes', 'Tipo', 'Matrícula'], noVigentes.map((u) => [nombre(u), u.tipo, u.matricula_empleado || '—']), [148, 163, 184], pdf.lastAutoTable.finalY + 6);
+      tabla(['Visitantes vigentes', 'Identificación', 'Empresa', 'Vence'], visitVigentes.map((v) => [v.nombre, v.identificacion, v.empresa || '—', fmt(v.fecha_fin)]), [63, 114, 191], pdf.lastAutoTable.finalY + 6);
 
       pdf.save(`reporte-sicad-${new Date().toISOString().slice(0, 10)}.pdf`);
     } finally {
       setGenerando(false);
     }
-  };
-
-  // Filas de texto para la tabla del PDF, según la métrica seleccionada.
-  const tablaDatos = () => {
-    if (!stats) return [];
-    if (metrica === 'usuarios') {
-      return ['Tipo — Activos / Inactivos / Total', ...stats.usuariosPorTipo.map((u) => `  ${u.tipo}: ${u.activos} / ${u.inactivos} / ${u.total}`)];
-    }
-    if (metrica === 'accesos') {
-      return ['Fecha — Accesos', ...stats.accesosPorDia.map((d) => `  ${d.fecha}: ${d.total}`)];
-    }
-    if (metrica === 'credenciales') {
-      return ['Estado — Credenciales', ...stats.credencialesPorEstado.map((c) => `  ${c.estado}: ${c.total}`)];
-    }
-    return ['Estatus — Visitantes', ...stats.visitantesPorEstatus.map((v) => `  ${v.estatus}: ${v.total}`)];
   };
 
   if (!montado || !usuario) return null;
@@ -188,14 +177,19 @@ export default function Dashboard() {
       />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex items-center gap-4">
+          <Link 
+            href="/admin/usuarios"
+            className="rounded-xl p-2.5 text-slate-500 hover:bg-slate-100 hover:text-marino transition border border-platino/50 shadow-sm bg-white"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+          </Link>
           <div>
             <h1 className="text-2xl font-black text-marino">Panel de control</h1>
             <p className="text-xs font-medium text-slate-500">Elige un indicador para ver su gráfica.</p>
           </div>
-          <Link href="/admin/usuarios" className="rounded-xl bg-platino-light px-4 py-2.5 text-xs font-bold text-marino transition hover:bg-platino">
-            ← Gestión de usuarios
-          </Link>
         </div>
 
         {cargando && <p className="animate-pulse py-16 text-center font-semibold text-marino">Cargando indicadores…</p>}
