@@ -1,6 +1,7 @@
 'use client';
 
-// Caseta: registra a un visitante o proveedor externo (genera un pase temporal).
+// Caseta: registra a un visitante o proveedor externo. El registro deja un
+// acceso de ENTRADA en la bitácora (ya no genera un "pase temporal").
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
@@ -15,7 +16,7 @@ export default function RegistrarExterno() {
   const dispatch = useDispatch();
   const { usuario } = useSelector((s) => s.auth);
 
-  const [f, setF] = useState({ nombre: '', identificacion: '', empresa: '', motivo: '', destino: '', fecha_fin: '', tipo: 'VISITANTE' });
+  const [f, setF] = useState({ nombre: '', identificacion: '', empresa: '', motivo: '', destino: '', tipo: 'VISITANTE' });
   const [ok, setOk] = useState(false);
 
   useEffect(() => {
@@ -30,17 +31,14 @@ export default function RegistrarExterno() {
   const guardar = (e) => {
     e.preventDefault();
     if (!f.nombre || !f.identificacion) return;
-    const inicio = new Date();
-    // Si no capturaron "válido hasta", el pase dura 8 horas por defecto.
-    const fin = f.fecha_fin ? new Date(f.fecha_fin) : new Date(inicio.getTime() + 8 * 60 * 60 * 1000);
+    // Registra al externo y deja su acceso de ENTRADA en la bitácora (lo hace el backend).
     dispatch(
       registrarVisitante({
         nombre: f.nombre,
         identificacion: f.identificacion,
         empresa: f.empresa,
         motivo: f.motivo,
-        fecha_inicio: inicio.toISOString(),
-        fecha_fin: fin.toISOString(),
+        destino: f.destino,
       })
     );
     setOk(true);
@@ -55,7 +53,7 @@ export default function RegistrarExterno() {
       <main className="mx-auto grid w-full max-w-5xl flex-1 items-start gap-8 px-4 py-8 md:grid-cols-3">
         <form onSubmit={guardar} className="rounded-2xl border border-platino-light bg-white p-6 shadow-sm md:col-span-2">
           <h1 className="text-xl font-black text-marino">Registrar visitante o proveedor</h1>
-          <p className="mb-5 text-sm text-slate-500">Captura los datos del externo para generar un pase temporal de acceso.</p>
+          <p className="mb-5 text-sm text-slate-500">Captura los datos del externo para registrar su acceso de entrada en la bitácora.</p>
 
           <div className="mb-4">
             <span className="mb-1.5 block text-xs font-bold text-marino">Tipo de externo</span>
@@ -74,8 +72,7 @@ export default function RegistrarExterno() {
             <Campo label="Identificación" value={f.identificacion} onChange={set('identificacion')} placeholder="INE / credencial" required />
             <Campo label="Empresa o procedencia" value={f.empresa} onChange={set('empresa')} placeholder="Ej. Proveedora S.A." />
             <Campo label="Motivo de la visita" value={f.motivo} onChange={set('motivo')} placeholder="Ej. Entrega de material" />
-            <Campo label="Persona o área a visitar" value={f.destino} onChange={set('destino')} placeholder="Ej. Servicios Escolares" />
-            <Campo label="Válido hasta" type="datetime-local" value={f.fecha_fin} onChange={set('fecha_fin')} />
+            <Campo className="sm:col-span-2" label="Persona o área a visitar" value={f.destino} onChange={set('destino')} placeholder="Ej. Servicios Escolares" />
           </div>
 
           <div className="mt-6 flex gap-3">
@@ -83,19 +80,19 @@ export default function RegistrarExterno() {
             <button type="button" onClick={() => router.push('/caseta/validar')} className="rounded-xl border border-platino bg-white px-6 py-3 text-sm font-bold text-marino hover:bg-platino-light">Cancelar</button>
           </div>
 
-          {ok && <p className="mt-4 rounded-xl bg-green-100 px-4 py-3 text-sm font-bold text-verde">Pase temporal generado. Redirigiendo a la bitácora…</p>}
+          {ok && <p className="mt-4 rounded-xl bg-green-100 px-4 py-3 text-sm font-bold text-verde">Acceso registrado en la bitácora. Redirigiendo…</p>}
         </form>
 
-        {/* Vista previa del pase */}
+        {/* Vista previa del registro de acceso */}
         <div>
-          <p className="mb-2 text-sm font-black text-marino">Vista previa del pase</p>
+          <p className="mb-2 text-sm font-black text-marino">Vista previa del registro</p>
           <div className="flex flex-col gap-4 rounded-3xl bg-gradient-to-br from-marino to-marino-light p-5 text-white shadow-xl">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm font-black tracking-wide">PASE TEMPORAL</p>
+                <p className="text-sm font-black tracking-wide">REGISTRO DE ACCESO</p>
                 <p className="text-[8px] font-bold tracking-widest text-platino">{f.tipo} · SICAD</p>
               </div>
-              <span className="rounded-full bg-verde px-2.5 py-0.5 text-[9px] font-black">VIGENTE</span>
+              <span className="rounded-full bg-verde px-2.5 py-0.5 text-[9px] font-black">ENTRADA</span>
             </div>
             <p className="text-lg font-black">{f.nombre || 'Nombre del externo'}</p>
             <div className="space-y-1 text-xs">
@@ -104,7 +101,7 @@ export default function RegistrarExterno() {
               <Linea k="Identificación" v={f.identificacion || '—'} />
             </div>
           </div>
-          <p className="mt-3 text-xs text-slate-400">Al registrar, el externo recibe un pase con vigencia limitada que expira automáticamente.</p>
+          <p className="mt-3 text-xs text-slate-400">Al registrar, queda un acceso de entrada del externo en la bitácora de accesos.</p>
         </div>
       </main>
     </div>

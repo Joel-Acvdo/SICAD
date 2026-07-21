@@ -32,7 +32,7 @@ export default function LoginAlumnos() {
   useEffect(() => {
     if (!usuario) return;
     if (usuario.tipo === 'SEGURIDAD') router.push('/caseta/validar');
-    else if (usuario.tipo === 'ADMINISTRATIVO') router.push('/admin/usuarios');
+    else if (usuario.tipo === 'ADMINISTRATIVO') router.push('/admin/dashboard');
     else router.push('/credencial'); // alumnos/personal -> su credencial
   }, [usuario, router]);
 

@@ -30,7 +30,7 @@ export default function LoginAdmin() {
   useEffect(() => {
     if (!usuario) return;
     if (usuario.tipo === 'SEGURIDAD') router.push('/caseta/validar');
-    else if (usuario.tipo === 'ADMINISTRATIVO') router.push('/admin/usuarios');
+    else if (usuario.tipo === 'ADMINISTRATIVO') router.push('/admin/dashboard');
     else router.push('/credencial');
   }, [usuario, router]);
 

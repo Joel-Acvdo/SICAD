@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { cargarUsuarios, actualizarUsuario } from '@/store/userSlice';
-import { cargarAccesosYCredenciales } from '@/store/accessSlice';
+import { cargarAccesosYCredenciales, renovarVigencia } from '@/store/accessSlice';
 import TopBar from '@/components/TopBar';
 import Campo from '@/components/Campo';
 import Badge from '@/components/Badge';
@@ -23,6 +23,9 @@ export default function EditarUsuario() {
 
   const id = Number(params.id);
   const [f, setF] = useState(null);
+  const [password, setPassword] = useState(''); // vacío = no cambiar
+  const [nuevaFecha, setNuevaFecha] = useState(''); // fecha exacta de vencimiento
+  const [avisoVig, setAvisoVig] = useState('');
 
   useEffect(() => {
     dispatch(cargarUsuarios());
@@ -54,7 +57,7 @@ export default function EditarUsuario() {
 
   const guardar = (e) => {
     e.preventDefault();
-    dispatch(actualizarUsuario({
+    const campos = {
       id_usuario: id,
       nombre: f.nombre,
       apellidos: f.apellidos,
@@ -62,8 +65,17 @@ export default function EditarUsuario() {
       matricula_empleado: f.matricula_empleado,
       carrera: f.carrera,
       tipo: f.tipo,
-    }));
+    };
+    if (password) campos.password = password; // solo si escribieron una nueva
+    dispatch(actualizarUsuario(campos));
     router.push('/admin/usuarios');
+  };
+
+  // Edición de vigencia de la tarjeta (no navega; actualiza la credencial en vivo).
+  const aplicarVigencia = (payload, texto) => {
+    dispatch(renovarVigencia({ id_usuario: id, ...payload }));
+    setAvisoVig(texto);
+    setTimeout(() => setAvisoVig(''), 2500);
   };
 
   return (
@@ -98,6 +110,7 @@ export default function EditarUsuario() {
             <Campo label="Correo institucional" type="email" value={f.correo} onChange={set('correo')} required />
             <Campo label="Matrícula / No. de empleado" value={f.matricula_empleado || ''} onChange={set('matricula_empleado')} />
             <Campo className="sm:col-span-2" label="Carrera o área" value={f.carrera || ''} onChange={set('carrera')} />
+            <Campo className="sm:col-span-2" label="Nueva contraseña (opcional)" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Déjala vacía para no cambiarla" />
           </div>
 
           <div className="mt-6 flex gap-3">
@@ -128,6 +141,27 @@ export default function EditarUsuario() {
               {cred && <span className="text-[10px] text-platino">Vence {formatVigencia(cred.fecha_vencimiento)}</span>}
             </div>
           </div>
+
+          {/* Edición de la vigencia de la tarjeta (Servicios Escolares) */}
+          {cred && (
+            <div className="mt-4 rounded-2xl border border-platino-light bg-white p-4 shadow-sm">
+              <p className="text-sm font-black text-marino">Vigencia de la tarjeta</p>
+              <p className="mb-3 text-xs text-slate-500">Vence el <span className="font-bold text-marino">{formatVigencia(cred.fecha_vencimiento)}</span></p>
+
+              <div className="mb-3 flex gap-2">
+                <button type="button" onClick={() => aplicarVigencia({ meses: 6 }, 'Vigencia renovada +6 meses.')} className="flex-1 rounded-xl bg-platino-light py-2 text-xs font-bold text-marino transition hover:bg-platino">+6 meses</button>
+                <button type="button" onClick={() => aplicarVigencia({ meses: 12 }, 'Vigencia renovada +12 meses.')} className="flex-1 rounded-xl bg-platino-light py-2 text-xs font-bold text-marino transition hover:bg-platino">+12 meses</button>
+              </div>
+
+              <label className="mb-1 block text-xs font-bold text-marino">O fija una fecha exacta</label>
+              <div className="flex gap-2">
+                <input type="date" value={nuevaFecha} onChange={(e) => setNuevaFecha(e.target.value)} className="flex-1 rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none transition focus:border-azulmedio" />
+                <button type="button" disabled={!nuevaFecha} onClick={() => { aplicarVigencia({ fecha_vencimiento: nuevaFecha }, 'Vigencia actualizada.'); setNuevaFecha(''); }} className="rounded-xl bg-azulmedio px-4 py-2 text-xs font-bold text-white transition hover:bg-marino disabled:opacity-50">Aplicar</button>
+              </div>
+
+              {avisoVig && <p className="mt-3 rounded-lg bg-green-100 px-3 py-2 text-xs font-bold text-verde">{avisoVig}</p>}
+            </div>
+          )}
         </div>
       </main>
     </div>
