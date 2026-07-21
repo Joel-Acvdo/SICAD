@@ -1,41 +1,44 @@
 // Lógica de negocio del dashboard: agrega métricas del sistema (Prisma groupBy/count).
+// Las métricas de accesos se calculan sobre un RANGO de fechas (desde/hasta);
+// si no se indica, el rango por defecto es los últimos 7 días.
 const prisma = require('../../config/prisma');
 
 // Formatea una fecha como YYYY-MM-DD en hora local (para agrupar por día).
 function fechaLocal(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+const iniDia = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const finDia = (d) => { const x = new Date(d); x.setHours(23, 59, 59, 999); return x; };
 
-async function obtenerStats() {
-  const hoyInicio = new Date();
-  hoyInicio.setHours(0, 0, 0, 0);
-  const hace7 = new Date(hoyInicio);
-  hace7.setDate(hace7.getDate() - 6); // ventana de 7 días (incluye hoy)
+async function obtenerStats({ desde, hasta } = {}) {
+  const hoy = new Date();
+  // desde/hasta llegan como 'YYYY-MM-DD'; se toman como día completo (00:00 → 23:59).
+  const hastaD = hasta ? new Date(`${hasta}T23:59:59.999Z`) : finDia(hoy);
+  const desdeD = desde ? new Date(`${desde}T00:00:00.000Z`) : iniDia(new Date(hoy.getTime() - 6 * 86400000));
+  const rangoWhere = { fecha_hora: { gte: desdeD, lte: hastaD } };
 
   const [
     usuariosPorTipoEstatus,
     credencialesPorEstado,
-    accesosHoy,
-    visitantesPorEstatus,
+    accesosResultadoRango,
+    totalUsuarios,
     usuariosActivos,
     credencialesVigentes,
-    accesos7,
+    accesosRango,
   ] = await Promise.all([
     prisma.usuario.groupBy({ by: ['tipo', 'estatus'], _count: { _all: true } }),
     prisma.credencial.groupBy({ by: ['estado'], _count: { _all: true } }),
-    prisma.acceso.groupBy({ by: ['resultado'], where: { fecha_hora: { gte: hoyInicio } }, _count: { _all: true } }),
-    prisma.visitante.groupBy({ by: ['estatus'], _count: { _all: true } }),
+    prisma.acceso.groupBy({ by: ['resultado'], where: rangoWhere, _count: { _all: true } }),
+    prisma.usuario.count(),
     prisma.usuario.count({ where: { estatus: 'ACTIVO' } }),
     prisma.credencial.count({ where: { estado: 'ACTIVA' } }),
-    prisma.acceso.findMany({ where: { fecha_hora: { gte: hace7 } }, select: { fecha_hora: true } }),
+    prisma.acceso.findMany({ where: rangoWhere, select: { fecha_hora: true } }),
   ]);
 
-  // KPIs de accesos de hoy
-  const permitidosHoy = accesosHoy.find((a) => a.resultado === 'PERMITIDO')?._count._all || 0;
-  const denegadosHoy = accesosHoy.find((a) => a.resultado === 'DENEGADO')?._count._all || 0;
-  const visitantesVigentes = visitantesPorEstatus.find((v) => v.estatus === 'VIGENTE')?._count._all || 0;
+  const permitidos = accesosResultadoRango.find((a) => a.resultado === 'PERMITIDO')?._count._all || 0;
+  const denegados = accesosResultadoRango.find((a) => a.resultado === 'DENEGADO')?._count._all || 0;
 
-  // Usuarios por tipo, con desglose activos / inactivos (pivot del groupBy).
+  // Usuarios por tipo, con desglose activos / inactivos (estado actual, no depende del rango).
   const porTipo = {};
   for (const r of usuariosPorTipoEstatus) {
     if (!porTipo[r.tipo]) porTipo[r.tipo] = { tipo: r.tipo, activos: 0, inactivos: 0, total: 0 };
@@ -45,32 +48,37 @@ async function obtenerStats() {
     else porTipo[r.tipo].inactivos += n;
   }
 
-  // Accesos por día (últimos 7): se inicializan los 7 días y se cuentan en JS.
+  // Accesos por día: un bucket por cada día del rango (desde..hasta).
   const dias = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(hoyInicio);
-    d.setDate(d.getDate() - i);
-    dias.push({ fecha: fechaLocal(d), total: 0 });
+  const cur = iniDia(desdeD);
+  const finBucket = iniDia(hastaD);
+  while (cur <= finBucket) {
+    dias.push({ fecha: fechaLocal(cur), total: 0 });
+    cur.setDate(cur.getDate() + 1);
   }
   const idx = Object.fromEntries(dias.map((d, i) => [d.fecha, i]));
-  for (const a of accesos7) {
+  for (const a of accesosRango) {
     const key = fechaLocal(new Date(a.fecha_hora));
     if (key in idx) dias[idx[key]].total += 1;
   }
 
   return {
+    rango: { desde: fechaLocal(desdeD), hasta: fechaLocal(hastaD) },
     kpis: {
+      totalUsuarios,
       usuariosActivos,
-      accesosHoy: permitidosHoy + denegadosHoy,
-      permitidosHoy,
-      denegadosHoy,
+      accesos: permitidos + denegados, // accesos dentro del rango
+      permitidos,
+      denegados,
       credencialesVigentes,
-      visitantesVigentes,
     },
     usuariosPorTipo: Object.values(porTipo),
-    credencialesPorEstado: credencialesPorEstado.map((c) => ({ estado: c.estado, total: c._count._all })),
     accesosPorDia: dias,
-    visitantesPorEstatus: visitantesPorEstatus.map((v) => ({ estatus: v.estatus, total: v._count._all })),
+    accesosPorResultado: [
+      { resultado: 'PERMITIDO', total: permitidos },
+      { resultado: 'DENEGADO', total: denegados },
+    ],
+    credencialesPorEstado: credencialesPorEstado.map((c) => ({ estado: c.estado, total: c._count._all })),
   };
 }
 

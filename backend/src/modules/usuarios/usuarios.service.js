@@ -50,7 +50,7 @@ async function crear(datos) {
   if (existe) throw ApiError.conflict('Ya existe un usuario con ese correo');
 
   const id_rol = await idRol(rolPorTipo(datos.tipo));
-  const password_hash = await hashPassword(PASSWORD_INICIAL);
+  const password_hash = await hashPassword(datos.password || PASSWORD_INICIAL);
   const vence = new Date();
   vence.setFullYear(vence.getFullYear() + 1);
 
@@ -87,6 +87,7 @@ async function actualizar(id, datos) {
     data.tipo = datos.tipo;
     data.id_rol = await idRol(rolPorTipo(datos.tipo));
   }
+  if (datos.password) data.password_hash = await hashPassword(datos.password);
   const usuario = await prisma.usuario.update({ where: { id_usuario: id }, data, include: { rol: true } });
   return sanitizar(usuario);
 }

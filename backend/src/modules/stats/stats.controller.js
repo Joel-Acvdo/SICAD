@@ -1,9 +1,10 @@
 // Controlador HTTP del dashboard de estadísticas.
 const service = require('./stats.service');
 
-async function stats(_req, res, next) {
+async function stats(req, res, next) {
   try {
-    res.status(200).json(await service.obtenerStats());
+    // Rango de fechas opcional (?desde=&hasta=) para las métricas de accesos.
+    res.status(200).json(await service.obtenerStats({ desde: req.query.desde, hasta: req.query.hasta }));
   } catch (err) {
     next(err);
   }
