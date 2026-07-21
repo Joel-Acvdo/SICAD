@@ -31,9 +31,11 @@ export default function BitacoraCaseta() {
   if (!usuario) return null;
 
   const userDe = (id) => lista.find((u) => u.id_usuario === id);
+  // Nombre a mostrar: comunidad (usuario) o externo (visitante).
+  const nombreDe = (a) => (a.u ? nombreCompleto(a.u) : a.visitante?.nombre || a.persona_nombre || 'Externo');
   const filas = accesos
     .map((a) => ({ ...a, u: userDe(a.id_usuario) }))
-    .filter((a) => !q.trim() || nombreCompleto(a.u).toLowerCase().includes(q.toLowerCase()));
+    .filter((a) => !q.trim() || nombreDe(a).toLowerCase().includes(q.toLowerCase()));
 
   return (
     <div className="flex min-h-screen flex-col bg-gris-fondo">
@@ -58,9 +60,9 @@ export default function BitacoraCaseta() {
                 <svg className="h-7 w-7" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
               </div>
               <div className="min-w-0 flex-1">
-                <p className="font-bold text-marino">{a.u ? nombreCompleto(a.u) : 'Usuario'}</p>
+                <p className="font-bold text-marino">{nombreDe(a)}</p>
                 <p className="text-xs text-slate-500">{a.punto_nombre} · {formatFechaHora(a.fecha_hora)}</p>
-                <p className="text-[11px] text-slate-400">{a.u?.matricula_empleado || '—'} · {a.tipo_evento === 'ENTRADA' ? 'Entrada' : 'Salida'}</p>
+                <p className="text-[11px] text-slate-400">{a.u?.matricula_empleado || a.visitante?.empresa || 'Externo'} · {a.tipo_evento === 'ENTRADA' ? 'Entrada' : 'Salida'}</p>
               </div>
               <Badge tono={a.resultado === 'PERMITIDO' ? 'verde' : 'rojo'}>{a.resultado === 'PERMITIDO' ? 'Permitido' : 'Denegado'}</Badge>
             </div>

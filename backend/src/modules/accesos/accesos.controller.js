@@ -3,7 +3,10 @@ const service = require('./accesos.service');
 
 async function listar(req, res, next) {
   try {
-    const filtro = req.query.id_usuario ? { id_usuario: Number(req.query.id_usuario) } : {};
+    const filtro = {};
+    if (req.query.id_usuario) filtro.id_usuario = Number(req.query.id_usuario);
+    if (req.query.desde) filtro.desde = req.query.desde;
+    if (req.query.hasta) filtro.hasta = req.query.hasta;
     res.status(200).json({ accesos: await service.listar(filtro) });
   } catch (err) {
     next(err);

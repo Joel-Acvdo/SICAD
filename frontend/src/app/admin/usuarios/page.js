@@ -111,6 +111,12 @@ export default function GestionUsuarios() {
           </div>
           <div className="flex gap-2">
             <Link
+              href="/admin/dashboard"
+              className="inline-flex items-center gap-2 rounded-xl bg-azulmedio px-4 py-2.5 text-xs font-bold text-white shadow transition hover:bg-marino"
+            >
+              Dashboard
+            </Link>
+            <Link
               href="/admin/usuarios/nuevo"
               className="inline-flex items-center gap-2 rounded-xl bg-marino px-4 py-2.5 text-xs font-bold text-white shadow transition hover:bg-marino-light"
             >

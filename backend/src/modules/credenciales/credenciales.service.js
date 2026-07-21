@@ -13,14 +13,20 @@ async function miCredencial(id_usuario) {
   return cred;
 }
 
-// Renueva la vigencia sumando "meses" a la fecha de vencimiento vigente (o a hoy si ya venció).
-async function renovarVigencia(id_usuario, meses) {
+// Edita la vigencia: fija una "fecha_vencimiento" exacta, o suma "meses" a la vigencia
+// vigente (o a hoy si ya venció). Reactiva la credencial si estaba VENCIDA.
+async function renovarVigencia(id_usuario, { meses, fecha_vencimiento }) {
   const cred = await prisma.credencial.findFirst({ where: { id_usuario } });
   if (!cred) throw ApiError.notFound('El usuario no tiene credencial');
 
-  const base = cred.fecha_vencimiento > new Date() ? cred.fecha_vencimiento : new Date();
-  const vence = new Date(base);
-  vence.setMonth(vence.getMonth() + meses);
+  let vence;
+  if (fecha_vencimiento) {
+    vence = new Date(fecha_vencimiento);
+  } else {
+    const base = cred.fecha_vencimiento > new Date() ? cred.fecha_vencimiento : new Date();
+    vence = new Date(base);
+    vence.setMonth(vence.getMonth() + meses);
+  }
   const estado = cred.estado === 'VENCIDA' ? 'ACTIVA' : cred.estado;
 
   return prisma.credencial.update({
