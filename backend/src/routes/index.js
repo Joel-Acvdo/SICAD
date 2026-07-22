@@ -6,6 +6,7 @@ const credencialesRoutes = require('../modules/credenciales/credenciales.routes'
 const accesosRoutes = require('../modules/accesos/accesos.routes');
 const visitantesRoutes = require('../modules/visitantes/visitantes.routes');
 const puntosRoutes = require('../modules/puntos/puntos.routes');
+const statsRoutes = require('../modules/stats/stats.routes');
 
 const router = Router();
 
@@ -19,5 +20,6 @@ router.use('/credenciales', credencialesRoutes);
 router.use('/accesos', accesosRoutes);
 router.use('/visitantes', visitantesRoutes);
 router.use('/puntos', puntosRoutes);
+router.use('/stats', statsRoutes);
 
 module.exports = router;

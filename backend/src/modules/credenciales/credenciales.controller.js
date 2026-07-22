@@ -19,7 +19,7 @@ async function mia(req, res, next) {
 
 async function renovar(req, res, next) {
   try {
-    const credencial = await service.renovarVigencia(Number(req.params.id), req.body.meses);
+    const credencial = await service.renovarVigencia(Number(req.params.id), req.body);
     res.status(200).json({ credencial });
   } catch (err) {
     next(err);

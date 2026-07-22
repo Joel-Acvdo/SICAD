@@ -10,6 +10,8 @@ const crearSchema = z.object({
   matricula_empleado: z.string().optional(),
   carrera: z.string().optional(),
   tipo: z.enum(TIPOS),
+  // Contraseña opcional: si no se envía, se asigna una temporal por defecto.
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional(),
 });
 
 const actualizarSchema = z.object({
@@ -19,6 +21,8 @@ const actualizarSchema = z.object({
   matricula_empleado: z.string().nullable().optional(),
   carrera: z.string().nullable().optional(),
   tipo: z.enum(TIPOS).optional(),
+  // Si se envía, cambia la contraseña; si se omite, se conserva la actual.
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional(),
 });
 
 const estatusSchema = z.object({

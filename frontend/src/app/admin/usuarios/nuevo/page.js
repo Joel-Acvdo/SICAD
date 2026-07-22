@@ -15,7 +15,7 @@ export default function NuevoUsuario() {
   const dispatch = useDispatch();
   const { usuario } = useSelector((s) => s.auth);
 
-  const [f, setF] = useState({ nombre: '', apellidos: '', correo: '', matricula_empleado: '', carrera: '', tipo: 'ALUMNO' });
+  const [f, setF] = useState({ nombre: '', apellidos: '', correo: '', matricula_empleado: '', carrera: '', tipo: 'ALUMNO', password: '' });
 
   useEffect(() => {
     if (usuario && usuario.tipo !== 'ADMINISTRATIVO') router.push('/login-admin');
@@ -27,8 +27,11 @@ export default function NuevoUsuario() {
     e.preventDefault();
     if (!f.nombre || !f.apellidos || !f.correo) return;
     try {
+      // Si dejan la contraseña vacía, se omite para que el backend asigne la temporal.
+      const payload = { ...f };
+      if (!payload.password) delete payload.password;
       // El backend crea el usuario Y emite su credencial automáticamente.
-      await dispatch(agregarUsuario(f)).unwrap();
+      await dispatch(agregarUsuario(payload)).unwrap();
       router.push('/admin/usuarios');
     } catch {
       // si falla (ej. correo duplicado) no navega; el error queda en el estado.
@@ -63,6 +66,7 @@ export default function NuevoUsuario() {
             <Campo label="Correo institucional" type="email" value={f.correo} onChange={set('correo')} placeholder="usuario@upa.edu.mx" required />
             <Campo label="Matrícula / No. de empleado" value={f.matricula_empleado} onChange={set('matricula_empleado')} placeholder="UP230571" />
             <Campo className="sm:col-span-2" label="Carrera o área" value={f.carrera} onChange={set('carrera')} placeholder="Ing. en Sistemas Computacionales" />
+            <Campo className="sm:col-span-2" label="Contraseña" type="password" value={f.password} onChange={set('password')} placeholder="Mínimo 6 caracteres · vacío = Sicad123!" />
           </div>
 
           <div className="mt-6 flex gap-3">

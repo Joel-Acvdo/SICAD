@@ -3,10 +3,11 @@
 // aquí se "aplana" a la forma que consume el frontend.
 const prisma = require('../../config/prisma');
 
-const INCLUDE = { punto: true, credencial: { include: { usuario: true } } };
+const INCLUDE = { punto: true, visitante: true, credencial: { include: { usuario: true } } };
 
 function aplanar(a) {
   const u = a.credencial?.usuario;
+  const v = a.visitante; // acceso de un externo (no tiene credencial/usuario)
   return {
     id_acceso: a.id_acceso,
     fecha_hora: a.fecha_hora,
@@ -17,12 +18,21 @@ function aplanar(a) {
     usuario: u
       ? { id_usuario: u.id_usuario, nombre: u.nombre, apellidos: u.apellidos, matricula_empleado: u.matricula_empleado }
       : null,
+    visitante: v ? { id_visitante: v.id_visitante, nombre: v.nombre, empresa: v.empresa, identificacion: v.identificacion } : null,
+    // Nombre unificado para la bitácora (comunidad o externo).
+    persona_nombre: u ? `${u.nombre} ${u.apellidos}` : v ? v.nombre : null,
   };
 }
 
 async function listar(filtro = {}) {
   const where = {};
   if (filtro.id_usuario) where.credencial = { id_usuario: filtro.id_usuario };
+  // Rango de fechas opcional (para reportes por periodo). Formato 'YYYY-MM-DD' = día completo.
+  if (filtro.desde || filtro.hasta) {
+    where.fecha_hora = {};
+    if (filtro.desde) where.fecha_hora.gte = new Date(`${filtro.desde}T00:00:00.000Z`);
+    if (filtro.hasta) where.fecha_hora.lte = new Date(`${filtro.hasta}T23:59:59.999Z`);
+  }
   const accesos = await prisma.acceso.findMany({ where, include: INCLUDE, orderBy: { fecha_hora: 'desc' } });
   return accesos.map(aplanar);
 }

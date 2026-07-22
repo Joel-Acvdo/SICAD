@@ -72,20 +72,22 @@ export const registrarAcceso = createAsyncThunk(
   }
 );
 
-// renovarVigencia: suma "meses" a la vigencia de la credencial de un usuario.
+// renovarVigencia: edita la vigencia de la credencial de un usuario, ya sea
+// sumando "meses" o fijando una "fecha_vencimiento" exacta (YYYY-MM-DD).
 export const renovarVigencia = createAsyncThunk(
   'access/renovarVigencia',
-  async ({ id_usuario, meses }, { rejectWithValue }) => {
+  async ({ id_usuario, meses, fecha_vencimiento }, { rejectWithValue }) => {
     try {
-      const { data } = await api.patch(`/credenciales/usuario/${id_usuario}/vigencia`, { meses });
+      const body = fecha_vencimiento ? { fecha_vencimiento } : { meses };
+      const { data } = await api.patch(`/credenciales/usuario/${id_usuario}/vigencia`, body);
       return data.credencial;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.error || 'No se pudo renovar la vigencia.');
+      return rejectWithValue(err.response?.data?.error || 'No se pudo editar la vigencia.');
     }
   }
 );
 
-// registrarVisitante: alta de un externo con pase temporal (caseta).
+// registrarVisitante: alta de un externo; el backend deja su acceso de entrada en la bitácora (caseta).
 export const registrarVisitante = createAsyncThunk(
   'access/registrarVisitante',
   async (datos, { rejectWithValue }) => {
