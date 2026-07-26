@@ -40,13 +40,18 @@ services:
       context: ./frontend
       args:
         # NEXT_PUBLIC_* se hornea en tiempo de BUILD (no en runtime), por eso va como build arg.
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
+        # Vacío = mismo origen (/api), que Next reenvía al backend vía rewrites.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+        # Destino del proxy: Next hornea el rewrite en el build (ver Dockerfile).
+        BACKEND_URL: ${BACKEND_URL:-http://backend:4000}
     container_name: sicad_frontend
     restart: unless-stopped
     depends_on:
       - backend
     environment:
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000/api}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
+      # Destino del proxy: el servidor de Next reenvía /api al backend (red interna de Docker).
+      BACKEND_URL: ${BACKEND_URL:-http://backend:4000}
     ports:
       - "3000:3000"
 
