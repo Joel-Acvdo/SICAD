@@ -25,7 +25,6 @@ export default function TerminalAcceso() {
   const [persona, setPersona] = useState(null);
   const [motivo, setMotivo] = useState('');
   const [camaraError, setCamaraError] = useState('');
-  const [manual, setManual] = useState(''); // código escrito a mano (respaldo sin cámara)
 
   // Anti-rebote: evita reprocesar el mismo QR muchas veces por segundo.
   const ultimoRef = useRef({ codigo: '', t: 0 });
@@ -88,12 +87,6 @@ export default function TerminalAcceso() {
     if (estadoRef.current !== 'idle') return; // ocupado mostrando un resultado
     ultimoRef.current = { codigo: texto, t: ahora };
     validar(texto);
-  };
-
-  const enviarManual = (e) => {
-    e.preventDefault();
-    validar(manual);
-    setManual('');
   };
 
   return (
@@ -169,27 +162,10 @@ export default function TerminalAcceso() {
           )}
         </div>
 
-        {/* Respaldo: capturar el código a mano (dispositivos sin cámara o pruebas) */}
-        <form onSubmit={enviarManual} className="flex w-full max-w-md items-end gap-2">
-          <label className="flex-1">
-            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Sin cámara · captura el código
-            </span>
-            <input
-              value={manual}
-              onChange={(e) => setManual(e.target.value)}
-              placeholder="Ej. QR-UP230571-XYZ"
-              className="w-full rounded-xl border border-platino bg-white px-3 py-2.5 text-sm outline-none transition focus:border-azulmedio"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={!manual.trim() || estado === 'verificando'}
-            className="rounded-xl bg-azulmedio px-5 py-2.5 text-sm font-bold text-white shadow transition hover:bg-marino disabled:opacity-50"
-          >
-            Validar
-          </button>
-        </form>
+        {/* Sin cámara: el registro manual está en la pestaña "Validar" de la caseta. */}
+        <p className="text-xs text-slate-400">
+          ¿La persona no trae su credencial? Regístrala a mano desde <b>Validar</b> (flecha arriba a la izquierda).
+        </p>
       </main>
     </div>
   );

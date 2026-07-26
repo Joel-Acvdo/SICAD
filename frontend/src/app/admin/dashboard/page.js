@@ -105,9 +105,12 @@ export default function Dashboard() {
   }, [accesos]);
 
   useEffect(() => setMontado(true), []);
+  // Guard de sesión: sin usuario (o con un rol que no es admin) → al login.
+  // Se evalúa hasta estar montado porque la sesión se rehidrata de localStorage.
   useEffect(() => {
-    if (usuario && usuario.tipo !== 'ADMINISTRATIVO') router.push('/login-admin');
-  }, [usuario, router]);
+    if (!montado) return;
+    if (!usuario || usuario.tipo !== 'ADMINISTRATIVO') router.push('/login-admin');
+  }, [montado, usuario, router]);
 
   // Usuarios y credenciales son estado actual (no dependen del rango): se cargan una vez.
   useEffect(() => {

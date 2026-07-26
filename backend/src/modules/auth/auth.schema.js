@@ -1,5 +1,6 @@
 // Esquemas de validación (Zod) para el módulo de autenticación.
 const { z } = require('zod');
+const { evaluarPassword } = require('../../utils/password');
 
 const loginSchema = z.object({
   identificador: z.string().min(1, 'Ingresa tu correo o matrícula'),
@@ -16,4 +17,18 @@ const registroSchema = z.object({
   id_rol: z.number().int().positive('id_rol inválido'),
 });
 
-module.exports = { loginSchema, registroSchema };
+// Cambio de contraseña del PROPIO usuario: exige la actual y una nueva fuerte.
+const cambiarPasswordSchema = z
+  .object({
+    actual: z.string().min(1, 'Ingresa tu contraseña actual'),
+    nueva: z.string().min(1, 'Ingresa la contraseña nueva'),
+  })
+  .superRefine((data, ctx) => {
+    const { ok, motivo } = evaluarPassword(data.nueva);
+    if (!ok) ctx.addIssue({ path: ['nueva'], code: z.ZodIssueCode.custom, message: motivo });
+    if (data.actual === data.nueva) {
+      ctx.addIssue({ path: ['nueva'], code: z.ZodIssueCode.custom, message: 'La contraseña nueva debe ser diferente a la actual' });
+    }
+  });
+
+module.exports = { loginSchema, registroSchema, cambiarPasswordSchema };

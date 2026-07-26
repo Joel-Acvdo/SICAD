@@ -31,6 +31,9 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       PORT: 4000
       NODE_ENV: ${NODE_ENV:-development}
+      # Zona horaria local: los filtros "Hoy" y la agrupación por día de las
+      # gráficas se calculan en hora de México, no en UTC.
+      TZ: ${TZ:-America/Mexico_City}
     ports:
       - "4000:4000"
     command: sh -c "npx prisma migrate deploy && npm run seed && npm start"

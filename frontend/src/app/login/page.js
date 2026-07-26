@@ -12,6 +12,7 @@ import { useDispatch, useSelector } from 'react-redux'; // leer/escribir el esta
 import { login, limpiarError } from '@/store/authSlice'; // actions de la sesión (login real vía API)
 import Logo from '@/components/Logo'; // logo SICAD reutilizable
 import Campo from '@/components/Campo'; // input etiquetado reutilizable
+import DemoAcceso from '@/components/DemoAcceso'; // credenciales demo con copiar
 
 export default function LoginAlumnos() {
   const dispatch = useDispatch(); // dispatch(action) -> modifica el estado global
@@ -65,9 +66,7 @@ export default function LoginAlumnos() {
           ¿Eres administrativo? Entra aquí
         </Link>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
-          Demo: <span className="font-mono">UP230571</span> · <span className="font-mono">Alumno123!</span>
-        </p>
+        <DemoAcceso usuario="UP230571" password="Alumno123!" />
       </div>
     </main>
   );

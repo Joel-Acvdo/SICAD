@@ -34,6 +34,7 @@ model Usuario {
   correo             String         @unique @db.VarChar(150)
   matricula_empleado String?        @unique @db.VarChar(50)
   carrera            String?        @db.VarChar(150)
+  foto               String?        @db.Text // imagen en base64 (data URL), opcional
   password_hash      String         @db.VarChar(255)
   tipo               TipoUsuario
   estatus            EstatusUsuario @default(ACTIVO)

@@ -75,11 +75,19 @@ feature/* → dev → qa → main → Azure
 ## Estado (a 2026-07)
 
 Hecho: NFC→QR, Docker funcional, backend completo (auth + usuarios/credenciales/accesos/visitantes/
-puntos/stats), **frontend conectado a la API**, dashboard con Recharts + reporte PDF. Pendiente:
-**Azure**, presentación en inglés, y ajustes finos de UI.
+puntos/stats), **frontend conectado a la API**, dashboard con Recharts + reporte PDF, lector QR con
+cámara (solo entradas) + confirmación en vivo en el celular, **Azure Container Apps desplegado**,
+página de Ajustes (cambio de contraseña propio + reportar pérdida). Pendiente: presentación en inglés.
 
 ## Convenciones
 
 - Comentarios en español, claros pero sin ruido. Componentes reutilizables (`Campo`, `Modal`, `Badge`,
-  `TopBar`, `QrCode`). Nombres de credencial: campo `codigo_qr` (ya NO `codigo_nfc`).
+  `TopBar`, `QrCode`, `FotoPersona`, `DemoAcceso`). Nombres de credencial: campo `codigo_qr` (ya NO `codigo_nfc`).
 - Al conectar pantallas: thunks en el slice + manejo de `cargando`/`error`.
+- **Hooks personalizados** en `frontend/src/hooks/`. El principal es `useAccesosEnVivo`
+  (`hooks/useAccesosEnVivo.js`): sondea GET /accesos cada N segundos y expone
+  `{ accesos, cargando, ultimaActualizacion, hayNuevo }`; da el "tiempo real" de la bitácora
+  de Caseta (la de Admin se queda estática a propósito, por sus filtros). Documentación completa
+  en el encabezado del archivo.
+- Zona horaria: el backend corre con `TZ=America/Mexico_City` (docker-compose) para que los
+  filtros "Hoy" y la agrupación por día de las gráficas cuadren con la hora local.

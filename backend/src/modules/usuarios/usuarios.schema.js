@@ -22,6 +22,8 @@ const crearSchema = z
     tipo: z.enum(TIPOS),
     // Contraseña opcional: si no se envía, se asigna una temporal por defecto.
     password: z.string().optional(),
+    // Foto opcional (data URL base64, ya comprimida por el frontend).
+    foto: z.string().max(400000, 'La imagen es demasiado grande').optional(),
   })
   .superRefine(validarPassword);
 
@@ -35,6 +37,8 @@ const actualizarSchema = z
     tipo: z.enum(TIPOS).optional(),
     // Si se envía, cambia la contraseña; si se omite, se conserva la actual.
     password: z.string().optional(),
+    // Si se envía, cambia la foto; si se omite, se conserva la actual.
+    foto: z.string().max(400000, 'La imagen es demasiado grande').optional(),
   })
   .superRefine(validarPassword);
 
