@@ -30,4 +30,14 @@ async function registrar(req, res, next) {
   }
 }
 
-module.exports = { listar, mios, registrar };
+// Valida por código QR escaneado y registra el evento. Responde con el resultado
+// (PERMITIDO/DENEGADO), el motivo del rechazo si aplica y el acceso registrado.
+async function validarQr(req, res, next) {
+  try {
+    res.status(201).json(await service.validarQr(req.body));
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listar, mios, registrar, validarQr };

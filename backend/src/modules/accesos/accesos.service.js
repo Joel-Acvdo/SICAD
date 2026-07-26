@@ -37,11 +37,17 @@ async function listar(filtro = {}) {
   return accesos.map(aplanar);
 }
 
+// Resuelve el punto de acceso por nombre (lo crea si no existe).
+async function resolverPunto(nombre) {
+  let punto = await prisma.puntoAcceso.findFirst({ where: { nombre } });
+  if (!punto) punto = await prisma.puntoAcceso.create({ data: { nombre } });
+  return punto;
+}
+
 async function registrar({ id_usuario, punto_nombre, tipo_evento, resultado }) {
   // Resuelve la credencial del usuario (si aplica) y el punto de acceso (lo crea si no existe).
   const credencial = id_usuario ? await prisma.credencial.findFirst({ where: { id_usuario } }) : null;
-  let punto = await prisma.puntoAcceso.findFirst({ where: { nombre: punto_nombre } });
-  if (!punto) punto = await prisma.puntoAcceso.create({ data: { nombre: punto_nombre } });
+  const punto = await resolverPunto(punto_nombre);
 
   const acceso = await prisma.acceso.create({
     data: {
@@ -55,4 +61,57 @@ async function registrar({ id_usuario, punto_nombre, tipo_evento, resultado }) {
   return aplanar(acceso);
 }
 
-module.exports = { listar, registrar };
+// Valida una credencial a partir del código QR escaneado y registra el acceso.
+// Regla de control de acceso: se PERMITE el paso solo si la credencial existe,
+// está ACTIVA y vigente, y su usuario sigue ACTIVO. Cualquier otro caso se DENIEGA,
+// pero el intento SIEMPRE queda en la bitácora (con motivo del rechazo).
+async function validarQr({ codigo_qr, punto_nombre, tipo_evento }) {
+  const credencial = await prisma.credencial.findUnique({
+    where: { codigo_qr },
+    include: { usuario: true },
+  });
+
+  const ahora = new Date();
+  let resultado = 'PERMITIDO';
+  let motivo = null;
+
+  if (!credencial) {
+    resultado = 'DENEGADO';
+    motivo = 'Credencial no reconocida';
+  } else if (credencial.estado === 'REVOCADA') {
+    resultado = 'DENEGADO';
+    motivo = 'Credencial revocada';
+  } else if (credencial.estado === 'INACTIVA') {
+    resultado = 'DENEGADO';
+    motivo = 'Credencial inactiva';
+  } else if (credencial.estado === 'VENCIDA' || credencial.fecha_vencimiento < ahora) {
+    resultado = 'DENEGADO';
+    motivo = 'Credencial vencida';
+  } else if (credencial.usuario?.estatus !== 'ACTIVO') {
+    resultado = 'DENEGADO';
+    motivo = 'Usuario dado de baja o suspendido';
+  }
+
+  // Si venció por fecha pero seguía marcada ACTIVA, refleja el estado real en BD.
+  if (credencial && motivo === 'Credencial vencida' && credencial.estado !== 'VENCIDA') {
+    await prisma.credencial.update({
+      where: { id_credencial: credencial.id_credencial },
+      data: { estado: 'VENCIDA' },
+    });
+  }
+
+  const punto = await resolverPunto(punto_nombre);
+  const acceso = await prisma.acceso.create({
+    data: {
+      tipo_evento,
+      resultado,
+      id_credencial: credencial?.id_credencial || null,
+      id_punto: punto.id_punto,
+    },
+    include: INCLUDE,
+  });
+
+  return { resultado, motivo, acceso: aplanar(acceso) };
+}
+
+module.exports = { listar, registrar, validarQr };

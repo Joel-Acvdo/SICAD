@@ -20,4 +20,8 @@ router.patch('/mia/perdida', controller.reportarPerdida);
 // PATCH /api/credenciales/usuario/:id/vigencia → renueva la vigencia (Administrador)
 router.patch('/usuario/:id/vigencia', autorizar('Administrador'), validar(renovarSchema), controller.renovar);
 
+// POST  /api/credenciales/usuario/:id/reemitir → reemite la credencial: nuevo QR,
+// vuelve a ACTIVA con vigencia nueva y el código anterior queda inservible (Administrador)
+router.post('/usuario/:id/reemitir', autorizar('Administrador'), controller.reemitir);
+
 module.exports = router;

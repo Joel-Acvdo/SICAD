@@ -8,4 +8,12 @@ const registrarSchema = z.object({
   resultado: z.enum(['PERMITIDO', 'DENEGADO']),
 });
 
-module.exports = { registrarSchema };
+// Validación por código QR escaneado: solo se recibe el código leído, el punto
+// y el tipo de evento. El backend decide si el acceso se permite o se deniega.
+const validarQrSchema = z.object({
+  codigo_qr: z.string().trim().min(1, 'El código QR es requerido'),
+  punto_nombre: z.string().min(1, 'El punto de acceso es requerido'),
+  tipo_evento: z.enum(['ENTRADA', 'SALIDA']),
+});
+
+module.exports = { registrarSchema, validarQrSchema };

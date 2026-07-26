@@ -34,4 +34,13 @@ async function reportarPerdida(req, res, next) {
   }
 }
 
-module.exports = { listar, mia, renovar, reportarPerdida };
+// Reemite la credencial de un usuario (Servicios Escolares): nuevo QR + vigencia nueva.
+async function reemitir(req, res, next) {
+  try {
+    res.status(200).json({ credencial: await service.reemitir(Number(req.params.id)) });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listar, mia, renovar, reportarPerdida, reemitir };
