@@ -18,6 +18,11 @@ export default function BitacoraServicios() {
   const { lista } = useSelector((s) => s.users);
   const { accesos, visitantes } = useSelector((s) => s.access);
 
+  // Filtro por rango de fechas: se captura en los inputs (borrador) y se aplica al pulsar "Filtrar".
+  const [desde, setDesde] = useState('');
+  const [hasta, setHasta] = useState('');
+  const [rango, setRango] = useState({ desde: '', hasta: '' });
+
   useEffect(() => {
     dispatch(cargarUsuarios());
     dispatch(cargarAccesosYCredenciales());
@@ -29,33 +34,43 @@ export default function BitacoraServicios() {
   if (!usuario) return null;
 
   const userDe = (id) => lista.find((u) => u.id_usuario === id);
-  const denegados = accesos.filter((a) => a.resultado === 'DENEGADO').length;
+
+  // Aplica el rango a un acceso (día completo: 00:00 → 23:59).
+  const dentroRango = (fecha) => {
+    const t = new Date(fecha).getTime();
+    if (rango.desde && t < new Date(`${rango.desde}T00:00:00`).getTime()) return false;
+    if (rango.hasta && t > new Date(`${rango.hasta}T23:59:59.999`).getTime()) return false;
+    return true;
+  };
+  const accesosFiltrados = accesos.filter((a) => dentroRango(a.fecha_hora));
+  const denegados = accesosFiltrados.filter((a) => a.resultado === 'DENEGADO').length;
+
+  const aplicarFiltro = () => setRango({ desde, hasta });
+  const limpiarFiltro = () => { setDesde(''); setHasta(''); setRango({ desde: '', hasta: '' }); };
+  const hayFiltro = !!(rango.desde || rango.hasta);
 
   return (
     <div className="flex min-h-screen flex-col bg-gris-fondo">
-      <TopBar titulo="Servicios Escolares" subtitulo="Bitácora y reportes" onVolver={() => router.push('/admin/usuarios')} onSalir={() => { dispatch(logout()); router.push('/login-admin'); }} />
+      <TopBar titulo="Servicios Escolares" subtitulo="Bitácora y reportes" onVolver={() => router.push('/admin/dashboard')} onSalir={() => { dispatch(logout()); router.push('/login-admin'); }} />
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-        {/* Filtros */}
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="text-xs font-bold text-marino">Desde
-              <input type="date" className="mt-1 block rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none focus:border-azulmedio" />
-            </label>
-            <label className="text-xs font-bold text-marino">Hasta
-              <input type="date" className="mt-1 block rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none focus:border-azulmedio" />
-            </label>
-            <button className="rounded-xl bg-marino px-5 py-2.5 text-sm font-bold text-white transition hover:bg-marino-light">Filtrar</button>
-          </div>
-          <button className="inline-flex items-center gap-2 rounded-xl border border-platino bg-white px-5 py-2.5 text-sm font-bold text-marino hover:bg-platino-light">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" /></svg>
-            Exportar
-          </button>
+        {/* Filtros por fecha */}
+        <div className="mb-5 flex flex-wrap items-end gap-3">
+          <label className="text-xs font-bold text-marino">Desde
+            <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="mt-1 block rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none focus:border-azulmedio" />
+          </label>
+          <label className="text-xs font-bold text-marino">Hasta
+            <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="mt-1 block rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none focus:border-azulmedio" />
+          </label>
+          <button onClick={aplicarFiltro} className="rounded-xl bg-marino px-5 py-2.5 text-sm font-bold text-white transition hover:bg-marino-light">Filtrar</button>
+          {hayFiltro && (
+            <button onClick={limpiarFiltro} className="rounded-xl border border-platino bg-white px-4 py-2.5 text-sm font-bold text-marino hover:bg-platino-light">Limpiar</button>
+          )}
         </div>
 
-        {/* Estadísticas */}
+        {/* Estadísticas (reflejan el rango filtrado) */}
         <div className="mb-5 grid grid-cols-3 gap-3">
-          <Stat valor={accesos.length} label="Accesos registrados" color="text-marino" />
+          <Stat valor={accesosFiltrados.length} label="Accesos registrados" color="text-marino" />
           <Stat valor={denegados} label="Accesos denegados" color="text-rojo" />
           <Stat valor={visitantes.length} label="Visitantes externos" color="text-verde" />
         </div>
@@ -74,7 +89,7 @@ export default function BitacoraServicios() {
               </tr>
             </thead>
             <tbody>
-              {accesos.map((a) => {
+              {accesosFiltrados.map((a) => {
                 const u = userDe(a.id_usuario);
                 return (
                   <tr key={a.id_acceso} className="border-b border-platino-light last:border-0 hover:bg-platino-light/30">
@@ -93,7 +108,7 @@ export default function BitacoraServicios() {
 
         {/* Lista (móvil) */}
         <div className="space-y-3 md:hidden">
-          {accesos.map((a) => {
+          {accesosFiltrados.map((a) => {
             const u = userDe(a.id_usuario);
             return (
               <div key={a.id_acceso} className="flex items-center justify-between rounded-2xl border border-platino-light bg-white p-4 shadow-sm">
@@ -106,6 +121,13 @@ export default function BitacoraServicios() {
             );
           })}
         </div>
+
+        {/* Estado vacío */}
+        {accesosFiltrados.length === 0 && (
+          <p className="rounded-2xl border border-platino-light bg-white px-4 py-8 text-center text-sm text-slate-400">
+            {hayFiltro ? 'No hay accesos en el rango seleccionado.' : 'Aún no hay accesos registrados.'}
+          </p>
+        )}
       </main>
     </div>
   );

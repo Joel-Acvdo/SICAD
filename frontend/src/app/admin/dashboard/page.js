@@ -38,6 +38,19 @@ const SLUG = { usuarios: 'gestiondeusuarios', accesos: 'accesos', resultados: 'a
 
 const fmtFecha = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+// Placeholder que se muestra cuando una gráfica no tiene datos en el periodo.
+function SinDatos({ altura }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-1 text-center" style={{ height: altura }}>
+      <svg className="h-8 w-8 text-slate-300" fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 3v18h18M8 16v-4m4 4V9m4 7v-2" />
+      </svg>
+      <p className="text-sm font-semibold text-slate-400">No existen datos</p>
+      <p className="text-xs text-slate-400">No hay registros para el periodo seleccionado.</p>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const router = useRouter();
   const dispatch = useDispatch();
@@ -76,6 +89,21 @@ export default function Dashboard() {
     return { desde, hasta, etiqueta, slug };
   }, [preset, cDesde, cHasta]);
 
+  // Accesos por HORA (solo para el periodo "Hoy"): agrupa los accesos del día por
+  // hora y muestra el tramo continuo del primer al último acceso registrado.
+  const accesosPorHoraHoy = useMemo(() => {
+    const buckets = Array.from({ length: 24 }, (_, h) => ({ hora: h, total: 0 }));
+    accesos.forEach((a) => {
+      const h = new Date(a.fecha_hora).getHours();
+      if (h >= 0 && h < 24) buckets[h].total += 1;
+    });
+    const conDatos = buckets.filter((b) => b.total > 0);
+    if (conDatos.length === 0) return [];
+    const min = Math.min(...conDatos.map((b) => b.hora));
+    const max = Math.max(...conDatos.map((b) => b.hora));
+    return buckets.slice(min, max + 1).map((b) => ({ etiqueta: `${String(b.hora).padStart(2, '0')}:00`, total: b.total }));
+  }, [accesos]);
+
   useEffect(() => setMontado(true), []);
   useEffect(() => {
     if (usuario && usuario.tipo !== 'ADMINISTRATIVO') router.push('/login-admin');
@@ -98,16 +126,33 @@ export default function Dashboard() {
       .finally(() => setCargando(false));
   }, [rango.desde, rango.hasta]);
 
+  // Título de la gráfica: los accesos se muestran "por hora" cuando el periodo es Hoy.
+  const tituloGrafica = (id) => (id === 'accesos' && preset === 'hoy' ? 'Accesos por hora' : METRICAS[id].grafica);
+
+  // Datos que consume cada gráfica (según el filtro y el periodo activos).
+  const datosGrafica = (id) => {
+    if (id === 'usuarios') return stats.usuariosPorTipo.map((u) => ({ tipo: u.tipo, valor: filtro === 'activos' ? u.activos : filtro === 'inactivos' ? u.inactivos : u.total }));
+    if (id === 'accesos') return preset === 'hoy' ? accesosPorHoraHoy : stats.accesosPorDia;
+    if (id === 'resultados') return stats.accesosPorResultado;
+    return stats.credencialesPorEstado;
+  };
+
+  // ¿Hay algo que graficar? (evita gráficas vacías con solo la leyenda).
+  const hayDatos = (id) => {
+    const d = datosGrafica(id);
+    if (!d || d.length === 0) return false;
+    if (id === 'usuarios') return d.some((x) => x.valor > 0);
+    return d.some((x) => x.total > 0);
+  };
+
   // Gráfica de una métrica para pantalla (Recharts).
   const grafica = (id, altura) => {
+    if (!hayDatos(id)) return <SinDatos altura={altura} />;
+
     if (id === 'usuarios') {
-      const data = stats.usuariosPorTipo.map((u) => ({
-        tipo: u.tipo,
-        valor: filtro === 'activos' ? u.activos : filtro === 'inactivos' ? u.inactivos : u.total,
-      }));
       return (
         <ResponsiveContainer width="100%" height={altura}>
-          <BarChart data={data}>
+          <BarChart data={datosGrafica('usuarios')}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis dataKey="tipo" tick={{ fontSize: 11 }} />
             <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
@@ -118,11 +163,16 @@ export default function Dashboard() {
       );
     }
     if (id === 'accesos') {
+      const porHora = preset === 'hoy';
       return (
         <ResponsiveContainer width="100%" height={altura}>
-          <LineChart data={stats.accesosPorDia}>
+          <LineChart data={datosGrafica('accesos')}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="fecha" tickFormatter={(f) => f.slice(8) + '/' + f.slice(5, 7)} tick={{ fontSize: 11 }} />
+            <XAxis
+              dataKey={porHora ? 'etiqueta' : 'fecha'}
+              tickFormatter={porHora ? undefined : (f) => f.slice(8) + '/' + f.slice(5, 7)}
+              tick={{ fontSize: 11 }}
+            />
             <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
             <Tooltip />
             <Line type="monotone" dataKey="total" stroke={MARINO} strokeWidth={2.5} dot={{ r: 3 }} name="Accesos" />
@@ -160,7 +210,11 @@ export default function Dashboard() {
   // Datos {label,value} para las barras del PDF.
   const datosBarras = (id) => {
     if (id === 'usuarios') return stats.usuariosPorTipo.map((u) => ({ label: u.tipo, value: filtro === 'activos' ? u.activos : filtro === 'inactivos' ? u.inactivos : u.total }));
-    if (id === 'accesos') return stats.accesosPorDia.map((d) => ({ label: d.fecha.slice(5), value: d.total }));
+    if (id === 'accesos') {
+      return preset === 'hoy'
+        ? accesosPorHoraHoy.map((d) => ({ label: d.etiqueta, value: d.total }))
+        : stats.accesosPorDia.map((d) => ({ label: d.fecha.slice(5), value: d.total }));
+    }
     if (id === 'resultados') return stats.accesosPorResultado.map((r) => ({ label: r.resultado, value: r.total }));
     return stats.credencialesPorEstado.map((c) => ({ label: c.estado, value: c.total }));
   };
@@ -243,7 +297,7 @@ export default function Dashboard() {
         if (y > 235) { pdf.addPage(); y = 18; }
         pdf.setFontSize(12);
         pdf.setTextColor(20, 39, 78);
-        pdf.text(METRICAS[id].grafica, 14, y);
+        pdf.text(tituloGrafica(id), 14, y);
         y += 6;
         y = dibujarBarras(pdf, datosBarras(id), 14, y, w - 28, [63, 114, 191]) + 3;
         y = tablaPDF(pdf, id, y) + 10;
@@ -343,7 +397,7 @@ export default function Dashboard() {
             {metrica ? (
               <div className="rounded-2xl border border-platino-light bg-white p-5 shadow-sm">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                  <h3 className="text-sm font-black text-marino">{METRICAS[metrica].grafica}</h3>
+                  <h3 className="text-sm font-black text-marino">{tituloGrafica(metrica)}</h3>
                   <div className="flex items-center gap-2">
                     {metrica === 'usuarios' && (
                       <div className="flex gap-1 rounded-xl bg-platino-light p-1">
@@ -361,7 +415,7 @@ export default function Dashboard() {
               <div className="grid gap-6 lg:grid-cols-2">
                 {IDS.map((id) => (
                   <button key={id} onClick={() => setMetrica(id)} className="rounded-2xl border border-platino-light bg-white p-5 text-left shadow-sm transition hover:border-azulmedio/50">
-                    <h3 className="mb-3 text-sm font-black text-marino">{METRICAS[id].grafica}</h3>
+                    <h3 className="mb-3 text-sm font-black text-marino">{tituloGrafica(id)}</h3>
                     {grafica(id, 220)}
                   </button>
                 ))}

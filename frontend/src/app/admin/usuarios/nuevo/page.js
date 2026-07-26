@@ -16,6 +16,8 @@ export default function NuevoUsuario() {
   const { usuario } = useSelector((s) => s.auth);
 
   const [f, setF] = useState({ nombre: '', apellidos: '', correo: '', matricula_empleado: '', carrera: '', tipo: 'ALUMNO', password: '' });
+  const [guardando, setGuardando] = useState(false); // MEJ-06: petición en curso
+  const [errorMsg, setErrorMsg] = useState(''); // MEJ-06: error del servidor o de validación
 
   useEffect(() => {
     if (usuario && usuario.tipo !== 'ADMINISTRATIVO') router.push('/login-admin');
@@ -25,7 +27,12 @@ export default function NuevoUsuario() {
 
   const guardar = async (e) => {
     e.preventDefault();
-    if (!f.nombre || !f.apellidos || !f.correo) return;
+    setErrorMsg('');
+    if (!f.nombre || !f.apellidos || !f.correo) {
+      setErrorMsg('Completa nombre, apellidos y correo.');
+      return;
+    }
+    setGuardando(true);
     try {
       // Si dejan la contraseña vacía, se omite para que el backend asigne la temporal.
       const payload = { ...f };
@@ -33,8 +40,11 @@ export default function NuevoUsuario() {
       // El backend crea el usuario Y emite su credencial automáticamente.
       await dispatch(agregarUsuario(payload)).unwrap();
       router.push('/admin/usuarios');
-    } catch {
-      // si falla (ej. correo duplicado) no navega; el error queda en el estado.
+    } catch (err) {
+      // MEJ-06: si falla (correo duplicado, contraseña débil…) muestra el error y no navega.
+      setErrorMsg(typeof err === 'string' ? err : 'No se pudo registrar el usuario.');
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -66,11 +76,14 @@ export default function NuevoUsuario() {
             <Campo label="Correo institucional" type="email" value={f.correo} onChange={set('correo')} placeholder="usuario@upa.edu.mx" required />
             <Campo label="Matrícula / No. de empleado" value={f.matricula_empleado} onChange={set('matricula_empleado')} placeholder="UP230571" />
             <Campo className="sm:col-span-2" label="Carrera o área" value={f.carrera} onChange={set('carrera')} placeholder="Ing. en Sistemas Computacionales" />
-            <Campo className="sm:col-span-2" label="Contraseña" type="password" value={f.password} onChange={set('password')} placeholder="Mínimo 6 caracteres · vacío = Sicad123!" />
+            <Campo className="sm:col-span-2" label="Contraseña" type="password" value={f.password} onChange={set('password')} placeholder="Mín. 8 caracteres con letras y números · vacío = temporal" />
           </div>
 
+          {/* MEJ-06: mensaje de error del servidor o de validación */}
+          {errorMsg && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-rojo">{errorMsg}</p>}
+
           <div className="mt-6 flex gap-3">
-            <button type="submit" className="rounded-xl bg-azulmedio px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-marino">Registrar usuario</button>
+            <button type="submit" disabled={guardando} className="rounded-xl bg-azulmedio px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-marino disabled:opacity-60">{guardando ? 'Guardando…' : 'Registrar usuario'}</button>
             <button type="button" onClick={() => router.push('/admin/usuarios')} className="rounded-xl border border-platino bg-white px-6 py-3 text-sm font-bold text-marino hover:bg-platino-light">Cancelar</button>
           </div>
         </form>

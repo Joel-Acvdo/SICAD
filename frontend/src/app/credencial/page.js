@@ -1,11 +1,14 @@
 'use client';
 
 // Página principal del usuario: su credencial digital con QR + historial de accesos.
-import { useState, useEffect } from 'react';
+// Además "escucha" sus accesos (sondeo cada 4s): cuando la caseta le permite la
+// entrada, la confirmación aparece también aquí, en su propio celular.
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '@/store/authSlice';
 import { cargarMiCredencial, reportarPerdida } from '@/store/accessSlice';
+import api from '@/lib/api';
 import TopBar from '@/components/TopBar';
 import Badge from '@/components/Badge';
 import Modal from '@/components/Modal';
@@ -29,10 +32,42 @@ export default function CredencialDigital() {
 
   const [modalPerdida, setModalPerdida] = useState(false);
   const [mostrarQR, setMostrarQR] = useState(false);
+  const [confirmAcceso, setConfirmAcceso] = useState(null); // entrada recién permitida
+
+  // Último acceso conocido (para detectar los nuevos). null = aún no inicializado.
+  const ultimoIdRef = useRef(null);
 
   useEffect(() => {
     dispatch(cargarMiCredencial());
   }, [dispatch]);
+
+  // Sondeo: consulta "mis accesos" cada 4s. Si aparece un acceso NUEVO con
+  // resultado PERMITIDO, muestra la confirmación de entrada en este dispositivo.
+  useEffect(() => {
+    if (!usuario) return;
+    const tick = async () => {
+      try {
+        const { data } = await api.get('/accesos/mios');
+        const top = data.accesos?.[0];
+        if (ultimoIdRef.current === null) {
+          ultimoIdRef.current = top?.id_acceso ?? 0; // primera lectura: solo memoriza
+          return;
+        }
+        if (top && top.id_acceso > ultimoIdRef.current) {
+          ultimoIdRef.current = top.id_acceso;
+          dispatch(cargarMiCredencial()); // refresca el historial en pantalla
+          if (top.resultado === 'PERMITIDO') {
+            setMostrarQR(false); // cierra el QR: ya pasó
+            setConfirmAcceso(top);
+          }
+        }
+      } catch {} // sin red un momento: se reintenta en el siguiente tick
+    };
+    tick();
+    // Con el QR abierto (esperando ser escaneado) consulta rápido; si no, relajado.
+    const id = setInterval(tick, mostrarQR ? 1500 : 5000);
+    return () => clearInterval(id);
+  }, [usuario, dispatch, mostrarQR]);
 
   useEffect(() => {
     if (!usuario) router.push('/login');
@@ -156,6 +191,29 @@ export default function CredencialDigital() {
           </div>
         </section>
       </main>
+
+      {/* Confirmación en el celular del alumno: la caseta acaba de permitir su entrada */}
+      {confirmAcceso && (
+        <div className="fixed inset-0 z-50 flex animate-fade-in flex-col items-center justify-center bg-verde p-6 text-center text-white">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/20 ring-8 ring-white/10">
+            <svg className="h-12 w-12" fill="none" stroke="currentColor" strokeWidth={3.5} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="mt-6 text-2xl font-black tracking-wide">ENTRADA REGISTRADA</h2>
+          <p className="mt-1 text-sm font-semibold text-white/90">Bienvenido, {usuario.nombre} 👋</p>
+          <div className="mt-6 w-full max-w-xs space-y-2 rounded-2xl bg-white/15 p-4 text-left text-sm">
+            <div className="flex justify-between"><span className="text-white/75">Punto:</span><span className="font-bold">{confirmAcceso.punto_nombre}</span></div>
+            <div className="flex justify-between"><span className="text-white/75">Fecha y hora:</span><span className="font-bold">{formatFechaHora(confirmAcceso.fecha_hora)}</span></div>
+          </div>
+          <button
+            onClick={() => setConfirmAcceso(null)}
+            className="mt-8 w-full max-w-xs rounded-xl bg-white py-3 font-bold text-verde shadow-lg"
+          >
+            Listo
+          </button>
+        </div>
+      )}
 
       {/* Modal: mostrar el QR grande para escanear en el punto de acceso */}
       {mostrarQR && (

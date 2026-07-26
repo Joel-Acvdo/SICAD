@@ -1,8 +1,10 @@
 // Cliente Axios centralizado. Adjunta el token JWT a cada petición.
 import axios from 'axios';
 
+// Mismo origen por defecto: el navegador llama a /api y Next lo reenvía al backend
+// (ver rewrites en next.config.mjs). Así funciona igual en desktop, Docker y túnel.
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
 });
 
 // Interceptor: agrega el token guardado en localStorage.
