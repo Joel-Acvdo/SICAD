@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { cargarUsuarios, actualizarUsuario } from '@/store/userSlice';
-import { cargarAccesosYCredenciales, renovarVigencia } from '@/store/accessSlice';
+import { cargarAccesosYCredenciales, renovarVigencia, reemitirCredencial } from '@/store/accessSlice';
 import TopBar from '@/components/TopBar';
 import Campo from '@/components/Campo';
 import Badge from '@/components/Badge';
@@ -26,6 +26,9 @@ export default function EditarUsuario() {
   const [password, setPassword] = useState(''); // vacío = no cambiar
   const [nuevaFecha, setNuevaFecha] = useState(''); // fecha exacta de vencimiento
   const [avisoVig, setAvisoVig] = useState('');
+  const [confirmReem, setConfirmReem] = useState(false); // MEJ-05: confirmar reemisión
+  const [reemitiendo, setReemitiendo] = useState(false);
+  const [avisoReem, setAvisoReem] = useState('');
 
   useEffect(() => {
     dispatch(cargarUsuarios());
@@ -76,6 +79,21 @@ export default function EditarUsuario() {
     dispatch(renovarVigencia({ id_usuario: id, ...payload }));
     setAvisoVig(texto);
     setTimeout(() => setAvisoVig(''), 2500);
+  };
+
+  // MEJ-05: reemite la credencial (nuevo QR, vuelve a ACTIVA, el código anterior muere).
+  const reemitir = async () => {
+    setConfirmReem(false);
+    setReemitiendo(true);
+    try {
+      await dispatch(reemitirCredencial(id)).unwrap();
+      setAvisoReem('Credencial reemitida: se generó un QR nuevo y el anterior quedó inservible.');
+      setTimeout(() => setAvisoReem(''), 4000);
+    } catch (err) {
+      setAvisoReem(typeof err === 'string' ? err : 'No se pudo reemitir la credencial.');
+    } finally {
+      setReemitiendo(false);
+    }
   };
 
   return (
@@ -160,6 +178,35 @@ export default function EditarUsuario() {
               </div>
 
               {avisoVig && <p className="mt-3 rounded-lg bg-green-100 px-3 py-2 text-xs font-bold text-verde">{avisoVig}</p>}
+            </div>
+          )}
+
+          {/* MEJ-05: reemitir credencial (devolver el acceso tras una pérdida) */}
+          {cred && (
+            <div className="mt-4 rounded-2xl border border-platino-light bg-white p-4 shadow-sm">
+              <p className="text-sm font-black text-marino">Reemitir credencial</p>
+              <p className="mb-3 text-xs text-slate-500">
+                Genera un <b>código QR nuevo</b> y reactiva la credencial. El código anterior queda
+                inservible para siempre (útil cuando el alumno reportó su credencial como perdida).
+              </p>
+
+              {!confirmReem ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmReem(true)}
+                  disabled={reemitiendo}
+                  className="w-full rounded-xl bg-marino py-2.5 text-xs font-bold text-white transition hover:bg-marino-dark disabled:opacity-60"
+                >
+                  {reemitiendo ? 'Reemitiendo…' : 'Reemitir credencial'}
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button type="button" onClick={reemitir} className="flex-1 rounded-xl bg-rojo py-2.5 text-xs font-bold text-white transition hover:opacity-90">Sí, reemitir</button>
+                  <button type="button" onClick={() => setConfirmReem(false)} className="flex-1 rounded-xl border border-platino bg-white py-2.5 text-xs font-bold text-marino hover:bg-platino-light">Cancelar</button>
+                </div>
+              )}
+
+              {avisoReem && <p className="mt-3 rounded-lg bg-green-100 px-3 py-2 text-xs font-bold text-verde">{avisoReem}</p>}
             </div>
           )}
         </div>

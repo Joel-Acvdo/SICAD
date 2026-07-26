@@ -18,6 +18,8 @@ export default function RegistrarExterno() {
 
   const [f, setF] = useState({ nombre: '', identificacion: '', empresa: '', motivo: '', destino: '', tipo: 'VISITANTE' });
   const [ok, setOk] = useState(false);
+  const [guardando, setGuardando] = useState(false); // MEJ-06: petición en curso
+  const [errorMsg, setErrorMsg] = useState(''); // MEJ-06: error del servidor o de validación
 
   useEffect(() => {
     dispatch(cargarAccesosYCredenciales());
@@ -28,21 +30,34 @@ export default function RegistrarExterno() {
 
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
 
-  const guardar = (e) => {
+  // MEJ-06: espera la confirmación real del servidor con .unwrap() antes de dar por
+  // registrado el acceso (antes decía "todo bien" aunque la petición hubiera fallado).
+  const guardar = async (e) => {
     e.preventDefault();
-    if (!f.nombre || !f.identificacion) return;
-    // Registra al externo y deja su acceso de ENTRADA en la bitácora (lo hace el backend).
-    dispatch(
-      registrarVisitante({
-        nombre: f.nombre,
-        identificacion: f.identificacion,
-        empresa: f.empresa,
-        motivo: f.motivo,
-        destino: f.destino,
-      })
-    );
-    setOk(true);
-    setTimeout(() => router.push('/caseta/bitacora'), 1400);
+    setErrorMsg('');
+    if (!f.nombre || !f.identificacion) {
+      setErrorMsg('Captura al menos el nombre y la identificación.');
+      return;
+    }
+    setGuardando(true);
+    try {
+      // Registra al externo y deja su acceso de ENTRADA en la bitácora (lo hace el backend).
+      await dispatch(
+        registrarVisitante({
+          nombre: f.nombre,
+          identificacion: f.identificacion,
+          empresa: f.empresa,
+          motivo: f.motivo,
+          destino: f.destino,
+        })
+      ).unwrap();
+      setOk(true);
+      setTimeout(() => router.push('/caseta/bitacora'), 1200);
+    } catch (err) {
+      setErrorMsg(typeof err === 'string' ? err : 'No se pudo registrar el acceso.');
+    } finally {
+      setGuardando(false);
+    }
   };
 
   return (
@@ -76,10 +91,12 @@ export default function RegistrarExterno() {
           </div>
 
           <div className="mt-6 flex gap-3">
-            <button type="submit" className="rounded-xl bg-azulmedio px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-marino">Registrar acceso</button>
+            <button type="submit" disabled={guardando} className="rounded-xl bg-azulmedio px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-marino disabled:opacity-60">{guardando ? 'Guardando…' : 'Registrar acceso'}</button>
             <button type="button" onClick={() => router.push('/caseta/validar')} className="rounded-xl border border-platino bg-white px-6 py-3 text-sm font-bold text-marino hover:bg-platino-light">Cancelar</button>
           </div>
 
+          {/* MEJ-06: error real del servidor (ya no se muestra éxito si falló) */}
+          {errorMsg && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-medium text-rojo">{errorMsg}</p>}
           {ok && <p className="mt-4 rounded-xl bg-green-100 px-4 py-3 text-sm font-bold text-verde">Acceso registrado en la bitácora. Redirigiendo…</p>}
         </form>
 
