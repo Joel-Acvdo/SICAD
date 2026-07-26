@@ -13,6 +13,7 @@ import TopBar from '@/components/TopBar';
 import Badge from '@/components/Badge';
 import Modal from '@/components/Modal';
 import QrCode from '@/components/QrCode'; // QR real (escaneable) de la credencial
+import FotoPersona from '@/components/FotoPersona'; // foto real de la persona
 import { formatVigencia, formatFechaHora, nombreCompleto } from '@/lib/format';
 
 // Ícono de código QR (decorativo). Se dibuja como SVG en línea.
@@ -103,8 +104,19 @@ export default function CredencialDigital() {
         dark
         titulo="SICAD"
         derecha={
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <span className="hidden text-sm font-semibold sm:inline">Hola, {usuario.nombre}</span>
+            <button
+              onClick={() => router.push('/ajustes')}
+              aria-label="Ajustes"
+              title="Ajustes"
+              className="rounded-lg border border-white/20 bg-white/10 p-2 transition hover:bg-white hover:text-marino"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 4.06c.4-1.68 2.92-1.68 3.32 0a1.72 1.72 0 002.57 1.06c1.48-.9 3.26.88 2.36 2.36a1.72 1.72 0 001.06 2.57c1.68.4 1.68 2.92 0 3.32a1.72 1.72 0 00-1.06 2.57c.9 1.48-.88 3.26-2.36 2.36a1.72 1.72 0 00-2.57 1.06c-.4 1.68-2.92 1.68-3.32 0a1.72 1.72 0 00-2.57-1.06c-1.48.9-3.26-.88-2.36-2.36a1.72 1.72 0 00-1.06-2.57c-1.68-.4-1.68-2.92 0-3.32a1.72 1.72 0 001.06-2.57c-.9-1.48.88-3.26 2.36-2.36.97.59 2.24.07 2.57-1.06z" />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
+            </button>
             <button
               onClick={salir}
               className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold transition hover:bg-white hover:text-marino"
@@ -128,11 +140,15 @@ export default function CredencialDigital() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
-                <svg className="h-9 w-9 text-platino" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-                </svg>
-              </div>
+              {/* Foto real del alumno (misma persona = misma foto) */}
+              <FotoPersona
+                foto={usuario.foto}
+                nombre={nombreCompleto(usuario)}
+                semilla={usuario.matricula_empleado || usuario.correo}
+                size={64}
+                rounded="rounded-2xl"
+                className="border border-white/20"
+              />
               <div className="min-w-0">
                 <h4 className="truncate font-black leading-tight">{nombreCompleto(usuario)}</h4>
                 <p className="truncate text-[11px] text-platino">{usuario.carrera || 'Comunidad Universitaria'}</p>
@@ -161,11 +177,19 @@ export default function CredencialDigital() {
             </button>
             <button
               onClick={() => setModalPerdida(true)}
-              className="rounded-xl border border-platino bg-white py-3 text-sm font-bold text-marino transition hover:bg-platino-light"
+              disabled={cred.estado === 'REVOCADA'}
+              className="rounded-xl border border-platino bg-white py-3 text-sm font-bold text-marino transition hover:bg-platino-light disabled:cursor-not-allowed disabled:opacity-40"
             >
               Reportar pérdida
             </button>
           </div>
+
+          {/* Credencial ya revocada: la reactivación es presencial */}
+          {cred.estado === 'REVOCADA' && (
+            <p className="mt-3 w-full max-w-sm rounded-xl bg-red-50 px-4 py-3 text-center text-xs font-medium text-rojo">
+              Tu credencial está <b>revocada</b>. Acude a <b>Servicios Escolares</b> para que la reactiven.
+            </p>
+          )}
         </section>
 
         {/* Historial de accesos */}

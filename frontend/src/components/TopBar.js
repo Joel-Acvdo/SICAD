@@ -12,11 +12,13 @@
 //   derecha   -> contenido personalizado a la derecha (reemplaza a "Salir")
 //   dark      -> usa el fondo marino más oscuro
 // ============================================================================
+import { LogoInsignia } from './Logo';
+
 export default function TopBar({ titulo, subtitulo, onVolver, onSalir, derecha, dark }) {
   return (
     <header className={`${dark ? 'bg-marino-dark' : 'bg-marino'} px-4 py-3 text-white shadow-md`}>
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-        {/* Lado izquierdo: (volver) + logo QR + título/subtítulo */}
+        {/* Lado izquierdo: (volver) + logo SICAD + título/subtítulo */}
         <div className="flex min-w-0 items-center gap-3">
           {onVolver && (
             <button onClick={onVolver} aria-label="Volver" className="rounded-lg bg-white/10 p-2 transition hover:bg-white/20">
@@ -25,9 +27,12 @@ export default function TopBar({ titulo, subtitulo, onVolver, onSalir, derecha, 
               </svg>
             </button>
           )}
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-azulmedio text-[10px] font-black text-white">QR</div>
+          {/* Logo de la app (insignia QR) + nombre SICAD al lado */}
+          <LogoInsignia size={32} fondo="#3F72BF" />
           <div className="min-w-0">
-            <p className="truncate text-sm font-extrabold tracking-wide sm:text-base">{titulo}</p>
+            <p className="truncate text-sm font-extrabold tracking-wide sm:text-base">
+              SICAD{titulo && titulo !== 'SICAD' && <span className="font-semibold text-platino"> · {titulo}</span>}
+            </p>
             {subtitulo && <p className="truncate text-[11px] text-platino">{subtitulo}</p>}
           </div>
         </div>

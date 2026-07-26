@@ -4,26 +4,44 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
-import { agregarUsuario } from '@/store/userSlice';
+import { agregarUsuario, cargarUsuarios } from '@/store/userSlice';
+import SelectorCarrera from '@/components/SelectorCarrera';
+import { comprimirImagen } from '@/lib/imagen';
 import TopBar from '@/components/TopBar';
 import Campo from '@/components/Campo';
 
-const tipos = ['ALUMNO', 'DOCENTE', 'ADMINISTRATIVO'];
+const tipos = ['ALUMNO', 'DOCENTE', 'ADMINISTRATIVO', 'SEGURIDAD'];
+// Etiqueta visible de cada tipo (SEGURIDAD se muestra como "Caseta").
+const etiquetaTipo = (t) => (t === 'SEGURIDAD' ? 'Caseta' : t.charAt(0) + t.slice(1).toLowerCase());
 
 export default function NuevoUsuario() {
   const router = useRouter();
   const dispatch = useDispatch();
   const { usuario } = useSelector((s) => s.auth);
+  const { lista } = useSelector((s) => s.users); // para derivar las carreras ya usadas
 
   const [f, setF] = useState({ nombre: '', apellidos: '', correo: '', matricula_empleado: '', carrera: '', tipo: 'ALUMNO', password: '' });
+  const [foto, setFoto] = useState(''); // data URL de la foto (opcional)
   const [guardando, setGuardando] = useState(false); // MEJ-06: petición en curso
   const [errorMsg, setErrorMsg] = useState(''); // MEJ-06: error del servidor o de validación
 
   useEffect(() => {
-    if (usuario && usuario.tipo !== 'ADMINISTRATIVO') router.push('/login-admin');
+    if (!usuario || usuario.tipo !== 'ADMINISTRATIVO') router.push('/login-admin');
   }, [usuario, router]);
+  // Carga los usuarios para que el selector de carreras incluya las ya registradas.
+  useEffect(() => {
+    dispatch(cargarUsuarios());
+  }, [dispatch]);
 
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+
+  // Foto opcional: se recorta y comprime en el navegador (ver lib/imagen.js)
+  // y viaja como data URL en el mismo POST.
+  const elegirFoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try { setFoto(await comprimirImagen(file)); } catch {}
+  };
 
   const guardar = async (e) => {
     e.preventDefault();
@@ -37,6 +55,7 @@ export default function NuevoUsuario() {
       // Si dejan la contraseña vacía, se omite para que el backend asigne la temporal.
       const payload = { ...f };
       if (!payload.password) delete payload.password;
+      if (foto) payload.foto = foto; // opcional
       // El backend crea el usuario Y emite su credencial automáticamente.
       await dispatch(agregarUsuario(payload)).unwrap();
       router.push('/admin/usuarios');
@@ -60,11 +79,11 @@ export default function NuevoUsuario() {
 
           <div className="mb-4">
             <span className="mb-1.5 block text-xs font-bold text-marino">Tipo de usuario</span>
-            <div className="grid grid-cols-3 gap-2 rounded-xl bg-platino-light p-1">
+            <div className="grid grid-cols-4 gap-2 rounded-xl bg-platino-light p-1">
               {tipos.map((t) => (
                 <button key={t} type="button" onClick={() => setF({ ...f, tipo: t })}
                   className={`rounded-lg py-2 text-xs font-bold transition ${f.tipo === t ? 'bg-marino text-white shadow' : 'text-marino hover:bg-white'}`}>
-                  {t.charAt(0) + t.slice(1).toLowerCase()}
+                  {etiquetaTipo(t)}
                 </button>
               ))}
             </div>
@@ -75,8 +94,40 @@ export default function NuevoUsuario() {
             <Campo label="Apellidos" value={f.apellidos} onChange={set('apellidos')} placeholder="Ej. Acevedo Moreno" required />
             <Campo label="Correo institucional" type="email" value={f.correo} onChange={set('correo')} placeholder="usuario@upa.edu.mx" required />
             <Campo label="Matrícula / No. de empleado" value={f.matricula_empleado} onChange={set('matricula_empleado')} placeholder="UP230571" />
-            <Campo className="sm:col-span-2" label="Carrera o área" value={f.carrera} onChange={set('carrera')} placeholder="Ing. en Sistemas Computacionales" />
+            <SelectorCarrera
+              className="sm:col-span-2"
+              value={f.carrera}
+              onChange={(carrera) => setF({ ...f, carrera })}
+              existentes={lista.map((u) => u.carrera)}
+            />
             <Campo className="sm:col-span-2" label="Contraseña" type="password" value={f.password} onChange={set('password')} placeholder="Mín. 8 caracteres con letras y números · vacío = temporal" />
+
+            {/* Foto opcional para la credencial */}
+            <div className="sm:col-span-2">
+              <span className="mb-1.5 block text-xs font-bold text-marino">Foto (opcional)</span>
+              <div className="flex items-center gap-4">
+                {foto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={foto} alt="Vista previa" className="h-16 w-16 rounded-2xl object-cover" />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-platino-light text-slate-400">
+                    <svg className="h-8 w-8" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
+                  </div>
+                )}
+                <div className="flex flex-col gap-1.5">
+                  <label className="cursor-pointer rounded-xl border border-platino bg-white px-4 py-2 text-center text-xs font-bold text-marino transition hover:bg-platino-light">
+                    {foto ? 'Cambiar foto' : 'Subir foto'}
+                    <input type="file" accept="image/*" onChange={elegirFoto} className="hidden" />
+                  </label>
+                  {foto && (
+                    <button type="button" onClick={() => setFoto('')} className="text-xs font-semibold text-slate-400 hover:text-rojo">
+                      Quitar
+                    </button>
+                  )}
+                  <p className="text-[10px] text-slate-400">Se recorta a cuadrado y se comprime sola.</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* MEJ-06: mensaje de error del servidor o de validación */}
