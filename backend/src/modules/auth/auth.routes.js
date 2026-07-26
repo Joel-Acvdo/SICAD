@@ -3,7 +3,7 @@ const { Router } = require('express');
 const controller = require('./auth.controller');
 const { validar } = require('../../middlewares/validate.middleware');
 const { autenticar, autorizar } = require('../../middlewares/auth.middleware');
-const { loginSchema, registroSchema } = require('./auth.schema');
+const { loginSchema, registroSchema, cambiarPasswordSchema } = require('./auth.schema');
 
 const router = Router();
 
@@ -21,5 +21,8 @@ router.post(
 
 // GET /api/auth/perfil  → datos del usuario autenticado
 router.get('/perfil', autenticar, controller.perfil);
+
+// PATCH /api/auth/password → el usuario cambia SU contraseña (pide la actual)
+router.patch('/password', autenticar, validar(cambiarPasswordSchema), controller.cambiarPassword);
 
 module.exports = router;

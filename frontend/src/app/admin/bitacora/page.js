@@ -49,6 +49,17 @@ export default function BitacoraServicios() {
   const limpiarFiltro = () => { setDesde(''); setHasta(''); setRango({ desde: '', hasta: '' }); };
   const hayFiltro = !!(rango.desde || rango.hasta);
 
+  // Atajo "Solo hoy": llena ambas fechas con el día en curso y aplica de una vez.
+  const hoyStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const soloHoy = () => { const h = hoyStr(); setDesde(h); setHasta(h); setRango({ desde: h, hasta: h }); };
+  const filtroEsHoy = rango.desde === hoyStr() && rango.hasta === hoyStr();
+
+  // Nombre a mostrar: comunidad (usuario) o externo (persona_nombre del acceso).
+  const nombreDe = (a, u) => (u ? nombreCompleto(u) : a.persona_nombre || a.visitante?.nombre || 'Externo');
+
   return (
     <div className="flex min-h-screen flex-col bg-gris-fondo">
       <TopBar titulo="Servicios Escolares" subtitulo="Bitácora y reportes" onVolver={() => router.push('/admin/dashboard')} onSalir={() => { dispatch(logout()); router.push('/login-admin'); }} />
@@ -63,6 +74,12 @@ export default function BitacoraServicios() {
             <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="mt-1 block rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none focus:border-azulmedio" />
           </label>
           <button onClick={aplicarFiltro} className="rounded-xl bg-marino px-5 py-2.5 text-sm font-bold text-white transition hover:bg-marino-light">Filtrar</button>
+          <button
+            onClick={soloHoy}
+            className={`rounded-xl px-5 py-2.5 text-sm font-bold transition ${filtroEsHoy ? 'bg-azulmedio text-white' : 'border border-platino bg-white text-marino hover:bg-platino-light'}`}
+          >
+            Solo hoy
+          </button>
           {hayFiltro && (
             <button onClick={limpiarFiltro} className="rounded-xl border border-platino bg-white px-4 py-2.5 text-sm font-bold text-marino hover:bg-platino-light">Limpiar</button>
           )}
@@ -93,8 +110,8 @@ export default function BitacoraServicios() {
                 const u = userDe(a.id_usuario);
                 return (
                   <tr key={a.id_acceso} className="border-b border-platino-light last:border-0 hover:bg-platino-light/30">
-                    <td className="px-5 py-3 font-bold text-marino">{u ? nombreCompleto(u) : 'Usuario'}</td>
-                    <td className="px-5 py-3 text-slate-500">{u?.matricula_empleado || '—'}</td>
+                    <td className="px-5 py-3 font-bold text-marino">{nombreDe(a, u)}</td>
+                    <td className="px-5 py-3 text-slate-500">{u?.matricula_empleado || (a.visitante ? 'Externo' : '—')}</td>
                     <td className="px-5 py-3 text-slate-500">{a.punto_nombre}</td>
                     <td className="px-5 py-3 text-slate-500">{formatFechaHora(a.fecha_hora)}</td>
                     <td className="px-5 py-3 text-slate-500">{a.tipo_evento === 'ENTRADA' ? 'Entrada' : 'Salida'}</td>
@@ -113,7 +130,7 @@ export default function BitacoraServicios() {
             return (
               <div key={a.id_acceso} className="flex items-center justify-between rounded-2xl border border-platino-light bg-white p-4 shadow-sm">
                 <div className="min-w-0">
-                  <p className="font-bold text-marino">{u ? nombreCompleto(u) : 'Usuario'}</p>
+                  <p className="font-bold text-marino">{nombreDe(a, u)}</p>
                   <p className="text-xs text-slate-500">{a.punto_nombre} · {formatFechaHora(a.fecha_hora)}</p>
                 </div>
                 <Badge tono={a.resultado === 'PERMITIDO' ? 'verde' : 'rojo'}>{a.resultado === 'PERMITIDO' ? 'Permitido' : 'Denegado'}</Badge>

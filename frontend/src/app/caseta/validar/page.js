@@ -12,6 +12,7 @@ import TopBar from '@/components/TopBar';
 import TabsCaseta from '@/components/TabsCaseta';
 import Badge from '@/components/Badge';
 import Modal from '@/components/Modal';
+import FotoPersona from '@/components/FotoPersona';
 import { nombreCompleto, formatFechaHora } from '@/lib/format';
 
 export default function ValidarAlumno() {
@@ -120,9 +121,7 @@ export default function ValidarAlumno() {
             return (
               <div key={u.id_usuario} className="rounded-2xl border border-platino-light bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-platino-light text-slate-400">
-                    <svg className="h-8 w-8" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" /></svg>
-                  </div>
+                  <FotoPersona foto={u.foto} nombre={nombreCompleto(u)} semilla={u.matricula_empleado || u.correo} size={56} />
                   <div className="min-w-0 flex-1">
                     <p className="font-black text-marino">{nombreCompleto(u)}</p>
                     <p className="text-xs text-slate-500">{u.matricula_empleado} · {u.carrera || u.tipo}</p>

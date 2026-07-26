@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { login, limpiarError } from '@/store/authSlice';
 import Logo from '@/components/Logo';
 import Campo from '@/components/Campo';
+import DemoAcceso from '@/components/DemoAcceso';
 
 const areas = [
   { id: 'caseta', nombre: 'Personal de Caseta', demo: 'caseta@upa.edu.mx', pass: 'Caseta123!' },
@@ -97,9 +98,7 @@ export default function LoginAdmin() {
           Soy alumno o personal
         </Link>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
-          Demo: <span className="font-mono">{areaActual.demo}</span> · <span className="font-mono">{areaActual.pass}</span>
-        </p>
+        <DemoAcceso usuario={areaActual.demo} password={areaActual.pass} />
       </div>
     </main>
   );

@@ -29,4 +29,14 @@ async function perfil(req, res, next) {
   }
 }
 
-module.exports = { registrar, login, perfil };
+// El usuario autenticado cambia su propia contraseña.
+async function cambiarPassword(req, res, next) {
+  try {
+    await authService.cambiarPassword(req.usuario.id, req.body.actual, req.body.nueva);
+    res.status(200).json({ mensaje: 'Contraseña actualizada' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { registrar, login, perfil, cambiarPassword };
