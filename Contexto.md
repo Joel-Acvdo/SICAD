@@ -1,4 +1,4 @@
-# CLAUDE.md — Contexto del proyecto SICAD
+# Contexto.md — Contexto del proyecto SICAD
 
 Guía de contexto para trabajar en este repositorio. Léela antes de hacer cambios.
 

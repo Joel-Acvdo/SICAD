@@ -72,6 +72,34 @@ export const registrarAcceso = createAsyncThunk(
   }
 );
 
+// validarAccesoQr: valida una credencial por su código QR escaneado y registra el
+// acceso. El backend decide PERMITIDO/DENEGADO; devuelve { resultado, motivo, acceso }.
+export const validarAccesoQr = createAsyncThunk(
+  'access/validarQr',
+  async ({ codigo_qr, punto_nombre, tipo_evento }, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post('/accesos/validar-qr', { codigo_qr, punto_nombre, tipo_evento });
+      return data; // { resultado, motivo, acceso }
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error || 'No se pudo validar el código QR.');
+    }
+  }
+);
+
+// reemitirCredencial: Servicios Escolares reemite la credencial de un usuario (MEJ-05).
+// Genera un QR nuevo, la deja ACTIVA con vigencia nueva y el código anterior queda inservible.
+export const reemitirCredencial = createAsyncThunk(
+  'access/reemitir',
+  async (id_usuario, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post(`/credenciales/usuario/${id_usuario}/reemitir`);
+      return data.credencial;
+    } catch (err) {
+      return rejectWithValue(err.response?.data?.error || 'No se pudo reemitir la credencial.');
+    }
+  }
+);
+
 // renovarVigencia: edita la vigencia de la credencial de un usuario, ya sea
 // sumando "meses" o fijando una "fecha_vencimiento" exacta (YYYY-MM-DD).
 export const renovarVigencia = createAsyncThunk(
@@ -145,6 +173,15 @@ const accessSlice = createSlice({
       })
       .addCase(registrarAcceso.fulfilled, (s, a) => {
         s.accesos.unshift(a.payload);
+      })
+      .addCase(validarAccesoQr.fulfilled, (s, a) => {
+        // El evento (permitido o denegado) queda al frente de la bitácora.
+        if (a.payload?.acceso) s.accesos.unshift(a.payload.acceso);
+      })
+      .addCase(reemitirCredencial.fulfilled, (s, a) => {
+        const i = s.credenciales.findIndex((c) => c.id_usuario === a.payload.id_usuario);
+        if (i !== -1) s.credenciales[i] = a.payload;
+        else s.credenciales.push(a.payload);
       })
       .addCase(renovarVigencia.fulfilled, (s, a) => {
         const i = s.credenciales.findIndex((c) => c.id_credencial === a.payload.id_credencial);
