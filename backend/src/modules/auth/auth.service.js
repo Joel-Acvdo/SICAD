@@ -70,4 +70,17 @@ async function obtenerPerfil(idUsuario) {
   return sanitizar(usuario);
 }
 
-module.exports = { registrar, login, obtenerPerfil };
+// El usuario cambia SU propia contraseña: verifica la actual antes de guardar.
+async function cambiarPassword(idUsuario, actual, nueva) {
+  const usuario = await prisma.usuario.findUnique({ where: { id_usuario: idUsuario } });
+  if (!usuario) throw ApiError.notFound('Usuario no encontrado');
+
+  const coincide = await compararPassword(actual, usuario.password_hash);
+  if (!coincide) throw ApiError.unauthorized('La contraseña actual no es correcta');
+
+  const password_hash = await hashPassword(nueva);
+  await prisma.usuario.update({ where: { id_usuario: idUsuario }, data: { password_hash } });
+  return { ok: true };
+}
+
+module.exports = { registrar, login, obtenerPerfil, cambiarPassword };

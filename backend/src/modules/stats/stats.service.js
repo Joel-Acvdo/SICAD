@@ -12,9 +12,11 @@ const finDia = (d) => { const x = new Date(d); x.setHours(23, 59, 59, 999); retu
 
 async function obtenerStats({ desde, hasta } = {}) {
   const hoy = new Date();
-  // desde/hasta llegan como 'YYYY-MM-DD'; se toman como día completo (00:00 → 23:59).
-  const hastaD = hasta ? new Date(`${hasta}T23:59:59.999Z`) : finDia(hoy);
-  const desdeD = desde ? new Date(`${desde}T00:00:00.000Z`) : iniDia(new Date(hoy.getTime() - 6 * 86400000));
+  // desde/hasta llegan como 'YYYY-MM-DD'; se toman como día completo (00:00 → 23:59)
+  // en hora LOCAL del servidor (TZ=America/Mexico_City), no en UTC — si no, los
+  // accesos de la tarde/noche se salen del día y las gráficas de "Hoy" no cuadran.
+  const hastaD = hasta ? finDia(new Date(`${hasta}T12:00:00`)) : finDia(hoy);
+  const desdeD = desde ? iniDia(new Date(`${desde}T12:00:00`)) : iniDia(new Date(hoy.getTime() - 6 * 86400000));
   const rangoWhere = { fecha_hora: { gte: desdeD, lte: hastaD } };
 
   const [

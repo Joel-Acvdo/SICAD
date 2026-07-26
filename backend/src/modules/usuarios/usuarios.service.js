@@ -62,6 +62,7 @@ async function crear(datos) {
       correo: datos.correo,
       matricula_empleado: datos.matricula_empleado || null,
       carrera: datos.carrera || null,
+      foto: datos.foto || null,
       tipo: datos.tipo,
       id_rol,
       password_hash,
@@ -83,6 +84,8 @@ async function actualizar(id, datos) {
     matricula_empleado: datos.matricula_empleado ?? null,
     carrera: datos.carrera ?? null,
   };
+  // La foto solo se toca si viene en la petición (omitida = se conserva).
+  if (datos.foto !== undefined) data.foto = datos.foto || null;
   if (datos.tipo) {
     data.tipo = datos.tipo;
     data.id_rol = await idRol(rolPorTipo(datos.tipo));

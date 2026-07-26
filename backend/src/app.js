@@ -12,7 +12,8 @@ const app = express();
 
 app.use(helmet());
 app.use(cors());
-app.use(express.json());
+// Límite amplio: el alta de usuario puede traer una foto en base64 (~30-100 KB).
+app.use(express.json({ limit: '2mb' }));
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));

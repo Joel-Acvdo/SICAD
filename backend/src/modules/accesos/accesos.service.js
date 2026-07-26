@@ -27,11 +27,12 @@ function aplanar(a) {
 async function listar(filtro = {}) {
   const where = {};
   if (filtro.id_usuario) where.credencial = { id_usuario: filtro.id_usuario };
-  // Rango de fechas opcional (para reportes por periodo). Formato 'YYYY-MM-DD' = día completo.
+  // Rango de fechas opcional (para reportes por periodo). Formato 'YYYY-MM-DD' =
+  // día completo en hora LOCAL (TZ del servidor), igual que en stats.
   if (filtro.desde || filtro.hasta) {
     where.fecha_hora = {};
-    if (filtro.desde) where.fecha_hora.gte = new Date(`${filtro.desde}T00:00:00.000Z`);
-    if (filtro.hasta) where.fecha_hora.lte = new Date(`${filtro.hasta}T23:59:59.999Z`);
+    if (filtro.desde) where.fecha_hora.gte = new Date(`${filtro.desde}T00:00:00`);
+    if (filtro.hasta) where.fecha_hora.lte = new Date(`${filtro.hasta}T23:59:59.999`);
   }
   const accesos = await prisma.acceso.findMany({ where, include: INCLUDE, orderBy: { fecha_hora: 'desc' } });
   return accesos.map(aplanar);
