@@ -20,6 +20,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import api from '@/lib/api';
 import TopBar from '@/components/TopBar';
+import { hoyISO, haceDiasISO } from '@/lib/format';
 
 const AZUL = '#3F72BF';
 const MARINO = '#14274E';
@@ -67,8 +68,17 @@ export default function Dashboard() {
   const [metrica, setMetrica] = useState(null); // null = ver todas
   const [filtro, setFiltro] = useState('todos'); // todos | activos | inactivos
   const [preset, setPreset] = useState('7d'); // hoy | 7d | custom
-  const [cDesde, setCDesde] = useState('');
-  const [cHasta, setCHasta] = useState('');
+  // Las casillas SIEMPRE muestran el rango vigente (también con los presets),
+  // así se ve exactamente qué periodo se está consultando.
+  const [cDesde, setCDesde] = useState(haceDiasISO(6));
+  const [cHasta, setCHasta] = useState(hoyISO());
+
+  // Al pulsar "Hoy" o "Últimos 7 días" se rellenan las casillas en vez de vaciarlas.
+  const aplicarPreset = (id) => {
+    setPreset(id);
+    if (id === 'hoy') { setCDesde(hoyISO()); setCHasta(hoyISO()); }
+    else if (id === '7d') { setCDesde(haceDiasISO(6)); setCHasta(hoyISO()); }
+  };
 
   // Rango de fechas efectivo (desde/hasta en 'YYYY-MM-DD') + etiqueta y slug para el archivo.
   const rango = useMemo(() => {
@@ -123,8 +133,10 @@ export default function Dashboard() {
   useEffect(() => {
     setCargando(true);
     const params = { desde: rango.desde, hasta: rango.hasta };
-    Promise.all([api.get('/stats', { params }), api.get('/accesos', { params })])
-      .then(([s, a]) => { setStats(s.data); setAccesos(a.data.accesos); })
+    // Las credenciales se recargan junto con las stats: si alguien reporta la
+    // suya como perdida, el cambio se refleja aquí y en el PDF sin datos viejos.
+    Promise.all([api.get('/stats', { params }), api.get('/accesos', { params }), api.get('/credenciales')])
+      .then(([s, a, c]) => { setStats(s.data); setAccesos(a.data.accesos); setCredenciales(c.data.credenciales); })
       .catch((e) => setError(e.response?.data?.error || 'No se pudieron cargar las estadísticas.'))
       .finally(() => setCargando(false));
   }, [rango.desde, rango.hasta]);
@@ -317,7 +329,7 @@ export default function Dashboard() {
 
   const navBtn = 'inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold shadow-sm transition';
   const presetBtn = (id, t) => (
-    <button key={id} onClick={() => setPreset(id)} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${preset === id ? 'bg-marino text-white shadow' : 'text-marino hover:bg-white'}`}>{t}</button>
+    <button key={id} onClick={() => aplicarPreset(id)} className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${preset === id ? 'bg-marino text-white shadow' : 'text-marino hover:bg-white'}`}>{t}</button>
   );
 
   return (
@@ -366,9 +378,22 @@ export default function Dashboard() {
               {presetBtn('7d', 'Últimos 7 días')}
             </div>
             <div className="flex items-center gap-2">
-              <input type="date" value={cDesde} onChange={(e) => { setCDesde(e.target.value); setPreset('custom'); }} className="rounded-lg border border-platino bg-white px-2 py-1.5 text-xs outline-none focus:border-azulmedio" />
+              {/* "hasta" nunca puede ser anterior a "desde" (y viceversa) */}
+              <input
+                type="date"
+                value={cDesde}
+                max={cHasta || hoyISO()}
+                onChange={(e) => { setCDesde(e.target.value); setPreset('custom'); }}
+                className="rounded-lg border border-platino bg-white px-2 py-1.5 text-xs outline-none focus:border-azulmedio"
+              />
               <span className="text-xs text-slate-400">a</span>
-              <input type="date" value={cHasta} onChange={(e) => { setCHasta(e.target.value); setPreset('custom'); }} className="rounded-lg border border-platino bg-white px-2 py-1.5 text-xs outline-none focus:border-azulmedio" />
+              <input
+                type="date"
+                value={cHasta}
+                min={cDesde || undefined}
+                onChange={(e) => { setCHasta(e.target.value); setPreset('custom'); }}
+                className="rounded-lg border border-platino bg-white px-2 py-1.5 text-xs outline-none focus:border-azulmedio"
+              />
             </div>
           </div>
           <span className="text-xs font-bold text-azulmedio">{rango.etiqueta}</span>

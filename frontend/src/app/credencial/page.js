@@ -7,7 +7,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '@/store/authSlice';
-import { cargarMiCredencial, reportarPerdida } from '@/store/accessSlice';
+import { cargarMiCredencial } from '@/store/accessSlice';
 import api from '@/lib/api';
 import TopBar from '@/components/TopBar';
 import Badge from '@/components/Badge';
@@ -31,7 +31,6 @@ export default function CredencialDigital() {
   const { usuario } = useSelector((s) => s.auth);
   const { miCredencial, misAccesos, inicializado } = useSelector((s) => s.access);
 
-  const [modalPerdida, setModalPerdida] = useState(false);
   const [mostrarQR, setMostrarQR] = useState(false);
   const [confirmAcceso, setConfirmAcceso] = useState(null); // entrada recién permitida
 
@@ -92,10 +91,6 @@ export default function CredencialDigital() {
   const salir = () => {
     dispatch(logout());
     router.push('/login');
-  };
-  const confirmarPerdida = () => {
-    dispatch(reportarPerdida());
-    setModalPerdida(false);
   };
 
   return (
@@ -166,28 +161,22 @@ export default function CredencialDigital() {
             </div>
           </div>
 
-          {/* Botones de acción */}
-          <div className="mt-5 grid w-full max-w-sm grid-cols-2 gap-3">
+          {/* Acción principal. Reportar la pérdida vive en Ajustes (⚙ arriba),
+              para no dejar una acción destructiva junto al botón de uso diario. */}
+          <div className="mt-5 w-full max-w-sm">
             {/* BUG-A: cuando la credencial no está activa, el botón se ve
                 claramente inhabilitado y dice por qué (ya no es un botón muerto). */}
             <button
               onClick={() => setMostrarQR(true)}
               disabled={cred.estado !== 'ACTIVA'}
               title={cred.estado !== 'ACTIVA' ? 'Tu credencial no está activa' : 'Mostrar tu código QR'}
-              className={`rounded-xl py-3 text-sm font-bold shadow transition ${
+              className={`w-full rounded-xl py-3 text-sm font-bold shadow transition ${
                 cred.estado === 'ACTIVA'
                   ? 'bg-azulmedio text-white hover:bg-marino'
                   : 'cursor-not-allowed border border-platino bg-platino-light text-slate-400 shadow-none'
               }`}
             >
               {cred.estado === 'ACTIVA' ? 'Mostrar código QR' : 'QR no disponible'}
-            </button>
-            <button
-              onClick={() => setModalPerdida(true)}
-              disabled={cred.estado === 'REVOCADA'}
-              className="rounded-xl border border-platino bg-white py-3 text-sm font-bold text-marino transition hover:bg-platino-light disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Reportar pérdida
             </button>
           </div>
 
@@ -282,37 +271,6 @@ export default function CredencialDigital() {
         </Modal>
       )}
 
-      {/* Modal: reportar pérdida */}
-      {modalPerdida && (
-        <Modal onClose={() => setModalPerdida(false)}>
-          <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-rojo">
-              <svg className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86l-8.48 14.7A2 2 0 003.53 21h16.94a2 2 0 001.72-2.44L13.71 3.86a2 2 0 00-3.42 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-black text-marino">¿Reportar tu credencial como perdida?</h3>
-            <p className="mt-2 text-sm text-slate-500">
-              Tu credencial se <b>revocará de inmediato</b> y no podrás ingresar hasta que Servicios Escolares
-              emita una nueva.
-            </p>
-            <div className="mt-6 flex w-full gap-3">
-              <button
-                onClick={() => setModalPerdida(false)}
-                className="flex-1 rounded-xl border border-platino bg-white py-3 text-sm font-bold text-marino hover:bg-platino-light"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmarPerdida}
-                className="flex-1 rounded-xl bg-rojo py-3 text-sm font-bold text-white hover:opacity-90"
-              >
-                Sí, reportar
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }
