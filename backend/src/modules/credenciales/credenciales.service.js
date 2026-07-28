@@ -1,6 +1,7 @@
 // Lógica de negocio de credenciales: listado, credencial propia y renovación de vigencia.
 const prisma = require('../../config/prisma');
 const ApiError = require('../../utils/ApiError');
+const { generarCodigoQr } = require('../../utils/codigoQr');
 
 async function listar() {
   return prisma.credencial.findMany({ orderBy: { id_credencial: 'asc' } });
@@ -27,6 +28,14 @@ async function renovarVigencia(id_usuario, { meses, fecha_vencimiento }) {
     vence = new Date(base);
     vence.setMonth(vence.getMonth() + meses);
   }
+
+  // Tope duro: ninguna credencial puede quedar vigente más de 2 años desde hoy
+  // (aunque se apilen varias renovaciones de +12 meses).
+  const maximo = new Date();
+  maximo.setFullYear(maximo.getFullYear() + 2);
+  if (vence > maximo) {
+    throw ApiError.badRequest('La vigencia no puede ser mayor a 2 años a partir de hoy');
+  }
   const estado = cred.estado === 'VENCIDA' ? 'ACTIVA' : cred.estado;
 
   return prisma.credencial.update({
@@ -45,11 +54,7 @@ async function reportarPerdida(id_usuario) {
   });
 }
 
-// Genera un código QR nuevo y único para una credencial reemitida.
-function nuevoCodigoQR(matricula) {
-  const sufijo = Math.random().toString(36).slice(2, 7).toUpperCase();
-  return `QR-${matricula || 'USER'}-${sufijo}`;
-}
+// El código nuevo también es opaco (no lleva la matrícula) — ver utils/codigoQr.js.
 
 // Reemite la credencial de un usuario (MEJ-05): Servicios Escolares le devuelve el
 // acceso a quien reportó su credencial como perdida. Se le asigna un CÓDIGO QR NUEVO
@@ -70,7 +75,7 @@ async function reemitir(id_usuario) {
   return prisma.credencial.update({
     where: { id_credencial: cred.id_credencial },
     data: {
-      codigo_qr: nuevoCodigoQR(usuario?.matricula_empleado),
+      codigo_qr: generarCodigoQr(),
       estado: 'ACTIVA',
       fecha_emision: new Date(),
       fecha_vencimiento: vence,

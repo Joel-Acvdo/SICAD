@@ -1,12 +1,21 @@
 // Controladores HTTP del módulo de accesos (bitácora).
 const service = require('./accesos.service');
+const { validarRango } = require('../../utils/fechas');
+const ApiError = require('../../utils/ApiError');
 
 async function listar(req, res, next) {
   try {
     const filtro = {};
-    if (req.query.id_usuario) filtro.id_usuario = Number(req.query.id_usuario);
-    if (req.query.desde) filtro.desde = req.query.desde;
-    if (req.query.hasta) filtro.hasta = req.query.hasta;
+    // id_usuario debe ser un número real (evita NaN llegando a Prisma).
+    if (req.query.id_usuario) {
+      const id = Number(req.query.id_usuario);
+      if (!Number.isInteger(id) || id <= 0) throw ApiError.badRequest('El parámetro "id_usuario" no es válido');
+      filtro.id_usuario = id;
+    }
+    // Rango de fechas validado (formato AAAA-MM-DD y desde <= hasta).
+    const { desde, hasta } = validarRango(req.query.desde, req.query.hasta);
+    if (desde) filtro.desde = desde;
+    if (hasta) filtro.hasta = hasta;
     res.status(200).json({ accesos: await service.listar(filtro) });
   } catch (err) {
     next(err);
