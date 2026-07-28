@@ -48,6 +48,8 @@ export default function BitacoraServicios() {
   const aplicarFiltro = () => setRango({ desde, hasta });
   const limpiarFiltro = () => { setDesde(''); setHasta(''); setRango({ desde: '', hasta: '' }); };
   const hayFiltro = !!(rango.desde || rango.hasta);
+  // OBS-09: el rango está al revés (Desde posterior a Hasta) → se avisa.
+  const rangoInvertido = !!(rango.desde && rango.hasta && rango.desde > rango.hasta);
 
   // Atajo "Solo hoy": llena ambas fechas con el día en curso y aplica de una vez.
   const hoyStr = () => {
@@ -84,6 +86,16 @@ export default function BitacoraServicios() {
             <button onClick={limpiarFiltro} className="rounded-xl border border-platino bg-white px-4 py-2.5 text-sm font-bold text-marino hover:bg-platino-light">Limpiar</button>
           )}
         </div>
+
+        {/* OBS-09: avisa si el rango está al revés (antes solo salían 0 resultados) */}
+        {rangoInvertido && (
+          <p className="mb-4 flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+            <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86l-8.48 14.7A2 2 0 003.53 21h16.94a2 2 0 001.72-2.44L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            La fecha <b>Desde</b> es posterior a la fecha <b>Hasta</b>: por eso no se muestran resultados. Corrige el rango.
+          </p>
+        )}
 
         {/* Estadísticas (reflejan el rango filtrado) */}
         <div className="mb-5 grid grid-cols-3 gap-3">

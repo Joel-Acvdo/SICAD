@@ -3,6 +3,7 @@
 const prisma = require('../../config/prisma');
 const { hashPassword } = require('../../utils/password');
 const ApiError = require('../../utils/ApiError');
+const { generarCodigoQr } = require('../../utils/codigoQr');
 
 // Contraseña temporal que se asigna al emitir un usuario nuevo desde el panel.
 const PASSWORD_INICIAL = 'Sicad123!';
@@ -26,10 +27,7 @@ async function idRol(nombre) {
   return rol.id_rol;
 }
 
-function codigoQR(matricula) {
-  const sufijo = Math.random().toString(36).slice(2, 7).toUpperCase();
-  return `QR-${matricula || 'USER'}-${sufijo}`;
-}
+// El código del QR es opaco (no lleva la matrícula) — ver utils/codigoQr.js.
 
 async function listar() {
   const usuarios = await prisma.usuario.findMany({
@@ -49,6 +47,13 @@ async function crear(datos) {
   const existe = await prisma.usuario.findUnique({ where: { correo: datos.correo } });
   if (existe) throw ApiError.conflict('Ya existe un usuario con ese correo');
 
+  // La matrícula también es única en BD: se avisa con un 409 claro en vez de
+  // dejar que Prisma lance un error genérico (500).
+  if (datos.matricula_empleado) {
+    const dup = await prisma.usuario.findUnique({ where: { matricula_empleado: datos.matricula_empleado } });
+    if (dup) throw ApiError.conflict('Ya existe un usuario con esa matrícula o número de empleado');
+  }
+
   const id_rol = await idRol(rolPorTipo(datos.tipo));
   const password_hash = await hashPassword(datos.password || PASSWORD_INICIAL);
   const vence = new Date();
@@ -67,7 +72,7 @@ async function crear(datos) {
       id_rol,
       password_hash,
       credenciales: {
-        create: { codigo_qr: codigoQR(datos.matricula_empleado), estado: 'ACTIVA', fecha_vencimiento: vence },
+        create: { codigo_qr: generarCodigoQr(), estado: 'ACTIVA', fecha_vencimiento: vence },
       },
     },
     include: { rol: true },
@@ -77,6 +82,14 @@ async function crear(datos) {
 
 async function actualizar(id, datos) {
   await obtener(id); // valida existencia (lanza 404 si no está)
+
+  // Correo y matrícula son únicos: si ya los tiene OTRO usuario, se avisa con 409.
+  const dupCorreo = await prisma.usuario.findUnique({ where: { correo: datos.correo } });
+  if (dupCorreo && dupCorreo.id_usuario !== id) throw ApiError.conflict('Ese correo ya lo usa otro usuario');
+  if (datos.matricula_empleado) {
+    const dupMat = await prisma.usuario.findUnique({ where: { matricula_empleado: datos.matricula_empleado } });
+    if (dupMat && dupMat.id_usuario !== id) throw ApiError.conflict('Esa matrícula ya la usa otro usuario');
+  }
   const data = {
     nombre: datos.nombre,
     apellidos: datos.apellidos,

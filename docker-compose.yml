@@ -1,3 +1,18 @@
+# ============================================================================
+# SICAD — orquestación de los tres servicios.
+#
+# TODO EN UNA MÁQUINA (lo normal para desarrollar):
+#     docker compose up -d --build
+#
+# REPARTIDO EN TRES LAPTOPS (red de la Familia 4, ver RED-DISTRIBUIDA.md):
+# Cada laptop levanta SOLO su servicio nombrandolo:
+#     laptop de BD        →  docker compose up -d db
+#     laptop del backend  →  docker compose up -d --build backend
+#     laptop del frontend →  docker compose up -d --build frontend
+#
+# Los servicios ya no dependen entre si (depends_on), asi que cada uno puede
+# arrancar por separado en su propia maquina.
+# ============================================================================
 services:
   db:
     image: postgres:16-alpine
@@ -8,6 +23,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sicad_pass}
       POSTGRES_DB: ${POSTGRES_DB:-sicad}
     ports:
+      # 0.0.0.0 para que el backend pueda alcanzarla desde OTRA laptop.
       - "5432:5432"
     volumes:
       - sicad_pgdata:/var/lib/postgresql/data
@@ -22,11 +38,15 @@ services:
       context: ./backend
     container_name: sicad_backend
     restart: unless-stopped
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-sicad}:${POSTGRES_PASSWORD:-sicad_pass}@db:5432/${POSTGRES_DB:-sicad}?schema=public
+      # Si NO se define DATABASE_URL, el backend busca la BD solo:
+      # DNS bd.fandite.com → IP 192.168.13.3 → localhost (ver config/destinos.js).
+      DATABASE_URL: ${DATABASE_URL:-}
+      DB_HOST_DNS: ${DB_HOST_DNS:-bd.fandite.com}
+      DB_HOST_IP: ${DB_HOST_IP:-192.168.13.3}
+      POSTGRES_USER: ${POSTGRES_USER:-sicad}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sicad_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-sicad}
       JWT_SECRET: ${JWT_SECRET:-cambia_este_secreto_en_produccion}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
       PORT: 4000
@@ -36,25 +56,27 @@ services:
       TZ: ${TZ:-America/Mexico_City}
     ports:
       - "4000:4000"
-    command: sh -c "npx prisma migrate deploy && npm run seed && npm start"
+    # Resuelve la BD, migra, siembra y arranca (ver backend/scripts/iniciar.js).
+    command: node scripts/iniciar.js
 
   frontend:
     build:
       context: ./frontend
       args:
-        # NEXT_PUBLIC_* se hornea en tiempo de BUILD (no en runtime), por eso va como build arg.
-        # Vacío = mismo origen (/api), que Next reenvía al backend vía rewrites.
+        # NEXT_PUBLIC_* se hornea en tiempo de BUILD (no en runtime).
+        # Vacío = mismo origen (/api), que el proxy de Next reenvía al backend.
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
-        # Destino del proxy: Next hornea el rewrite en el build (ver Dockerfile).
-        BACKEND_URL: ${BACKEND_URL:-http://backend:4000}
     container_name: sicad_frontend
     restart: unless-stopped
-    depends_on:
-      - backend
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-/api}
-      # Destino del proxy: el servidor de Next reenvía /api al backend (red interna de Docker).
-      BACKEND_URL: ${BACKEND_URL:-http://backend:4000}
+      # Si NO se define BACKEND_URL, el frontend busca el backend solo:
+      # DNS backend.fandite.com → IP 192.168.13.2 → localhost, revalidando
+      # cada 30 s (ver src/lib/backendDestino.js).
+      BACKEND_URL: ${BACKEND_URL:-}
+      BACKEND_HOST_DNS: ${BACKEND_HOST_DNS:-backend.fandite.com}
+      BACKEND_HOST_IP: ${BACKEND_HOST_IP:-192.168.13.2}
+      TZ: ${TZ:-America/Mexico_City}
     ports:
       - "3000:3000"
 

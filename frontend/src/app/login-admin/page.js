@@ -65,8 +65,11 @@ export default function LoginAdmin() {
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
+          {/* OBS-01: name + autoComplete para el autocompletado y la accesibilidad */}
           <Campo
             label="Usuario o correo"
+            name="username"
+            autoComplete="username"
             value={identificador}
             onChange={(e) => setIdentificador(e.target.value)}
             placeholder={areaActual.demo}
@@ -75,6 +78,8 @@ export default function LoginAdmin() {
           <Campo
             label="Contraseña"
             type="password"
+            name="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"

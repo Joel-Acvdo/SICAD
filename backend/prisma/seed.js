@@ -53,11 +53,18 @@ async function main() {
   }
 
   // --- Credenciales de la comunidad (upsert por codigo_qr) ---
+  // OBS-03: los códigos son OPACOS (no llevan la matrícula dentro). Aquí son
+  // fijos para que el seed sea reproducible; los que emite la app en caliente
+  // se generan al azar (ver src/utils/codigoQr.js).
+  const QR_JOEL = 'SICAD-4F9A2C7E1B6D80A3C5E7F9B1D3A5C7E9';
+  const QR_ANDREI = 'SICAD-B2D4F6A8C0E2A4C6E8B0D2F4A6C8E0B2';
+  const QR_DOCENTE = 'SICAD-1A3C5E7B9D1F3A5C7E9B1D3F5A7C9E1B';
+  const QR_REVOCADA = 'SICAD-9E7C5A3F1D9B7E5C3A1F9D7B5E3C1A9F';
   const credenciales = [
-    { codigo_qr: 'QR-UP230571-XYZ', estado: 'ACTIVA', matricula: 'UP230571', vence: new Date('2026-12-31T23:59:59.000Z') },
-    { codigo_qr: 'QR-UP230164-ABC', estado: 'ACTIVA', matricula: 'UP230164', vence: new Date('2026-12-31T23:59:59.000Z') },
-    { codigo_qr: 'QR-EMP0123-DOC', estado: 'ACTIVA', matricula: 'EMP0123', vence: new Date('2027-08-31T23:59:59.000Z') },
-    { codigo_qr: 'QR-UP229988-OLD', estado: 'REVOCADA', matricula: 'UP229988', vence: new Date('2025-12-31T23:59:59.000Z') },
+    { codigo_qr: QR_JOEL, estado: 'ACTIVA', matricula: 'UP230571', vence: new Date('2026-12-31T23:59:59.000Z') },
+    { codigo_qr: QR_ANDREI, estado: 'ACTIVA', matricula: 'UP230164', vence: new Date('2026-12-31T23:59:59.000Z') },
+    { codigo_qr: QR_DOCENTE, estado: 'ACTIVA', matricula: 'EMP0123', vence: new Date('2027-08-31T23:59:59.000Z') },
+    { codigo_qr: QR_REVOCADA, estado: 'REVOCADA', matricula: 'UP229988', vence: new Date('2025-12-31T23:59:59.000Z') },
   ];
   for (const c of credenciales) {
     const usuario = porMatricula[c.matricula];
@@ -84,7 +91,7 @@ async function main() {
     const cred = (qr) => prisma.credencial.findUnique({ where: { codigo_qr: qr } });
     const punto = (nombre) => prisma.puntoAcceso.findFirst({ where: { nombre } });
     const [joel, andrei, luis, entrada, edificio] = await Promise.all([
-      cred('QR-UP230571-XYZ'), cred('QR-UP230164-ABC'), cred('QR-UP229988-OLD'),
+      cred(QR_JOEL), cred(QR_ANDREI), cred(QR_REVOCADA),
       punto('Entrada Principal'), punto('Edificio A'),
     ]);
     await prisma.acceso.createMany({

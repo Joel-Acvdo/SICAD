@@ -330,9 +330,11 @@ export default function Dashboard() {
             <button
               onClick={descargarPDF}
               disabled={cargando || !!error || generando || !stats}
-              className="shrink-0 rounded-lg bg-white/10 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white hover:text-marino disabled:opacity-50"
+              title="Descargar PDF"
+              className="shrink-0 rounded-lg bg-white/10 px-2.5 py-1.5 text-xs font-bold text-white transition hover:bg-white hover:text-marino disabled:opacity-50 sm:px-3"
             >
-              {generando ? 'Generando…' : '↓ Descargar PDF'}
+              {/* En móvil solo el ícono, para que la barra no se desborde */}
+              {generando ? '…' : '↓'}<span className="hidden sm:inline">{generando ? ' Generando…' : ' Descargar PDF'}</span>
             </button>
             <button onClick={() => { dispatch(logout()); router.push('/login-admin'); }} className="shrink-0 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-white hover:text-marino">
               Salir

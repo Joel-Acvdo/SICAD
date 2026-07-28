@@ -27,7 +27,8 @@ export const agregarUsuario = createAsyncThunk(
       const { data } = await api.post('/usuarios', datos);
       return data.usuario;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.error || 'No se pudo registrar el usuario.');
+      // Se devuelve el objeto completo para poder pintar los errores POR CAMPO.
+      return rejectWithValue({ error: err.response?.data?.error || 'No se pudo registrar el usuario.', errores: err.response?.data?.errores });
     }
   }
 );
@@ -41,7 +42,7 @@ export const actualizarUsuario = createAsyncThunk(
       const { data } = await api.put(`/usuarios/${id_usuario}`, campos);
       return data.usuario;
     } catch (err) {
-      return rejectWithValue(err.response?.data?.error || 'No se pudo actualizar el usuario.');
+      return rejectWithValue({ error: err.response?.data?.error || 'No se pudo actualizar el usuario.', errores: err.response?.data?.errores });
     }
   }
 );
