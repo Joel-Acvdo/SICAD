@@ -13,7 +13,7 @@ import TopBar from '@/components/TopBar';
 import TabsCaseta from '@/components/TabsCaseta';
 import Badge from '@/components/Badge';
 import FotoPersona from '@/components/FotoPersona';
-import { formatFechaHora, nombreCompleto } from '@/lib/format';
+import { formatFechaHora, nombreCompleto, coincide } from '@/lib/format';
 
 export default function BitacoraCaseta() {
   const router = useRouter();
@@ -43,7 +43,7 @@ export default function BitacoraCaseta() {
   const filas = accesos
     .filter((a) => esHoy(a.fecha_hora))
     .map((a) => ({ ...a, u: userDe(a.id_usuario) }))
-    .filter((a) => !q.trim() || nombreDe(a).toLowerCase().includes(q.toLowerCase()));
+    .filter((a) => coincide(nombreDe(a), q)); // ignora acentos y caracteres especiales
 
   const hora = (d) => d?.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
@@ -70,7 +70,7 @@ export default function BitacoraCaseta() {
         <div className="space-y-3">
           {filas.map((a) => (
             <div key={a.id_acceso} className="flex items-center gap-4 rounded-2xl border border-platino-light bg-white p-3 shadow-sm">
-              <FotoPersona foto={a.u?.foto} nombre={nombreDe(a)} semilla={a.u?.matricula_empleado || a.visitante?.identificacion || nombreDe(a)} size={48} />
+              <FotoPersona foto={a.u?.foto} nombre={nombreDe(a)} size={48} />
               <div className="min-w-0 flex-1">
                 <p className="font-bold text-marino">{nombreDe(a)}</p>
                 <p className="text-xs text-slate-500">{a.punto_nombre} · {formatFechaHora(a.fecha_hora)}</p>

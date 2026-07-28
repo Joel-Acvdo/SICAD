@@ -1,25 +1,40 @@
 'use client';
 
 // ============================================================================
-// FotoPersona — avatar con FOTO real de la persona.
-// Usa el servicio pravatar.cc con una "semilla" (matrícula o nombre): la misma
-// persona recibe SIEMPRE la misma foto. En producción la foto vendría del
-// expediente del alumno; para la demo esto da rostros reales y consistentes.
-// Si la imagen no carga (sin internet), cae al ícono de silueta de siempre.
+// FotoPersona — avatar de una persona.
+//   1º) Si tiene FOTO real (subida al registrar), se muestra esa.
+//   2º) Si no, se dibuja un avatar LOCAL con sus iniciales y un color estable
+//       derivado del nombre (la misma persona siempre se ve igual).
+//
+// Se genera en el propio dispositivo: no depende de ningún servicio externo,
+// funciona sin internet y no manda datos del usuario a terceros (OBS-02).
 //
 // Props:
-//   foto    -> imagen REAL subida al registrar (data URL); tiene prioridad
-//   nombre  -> nombre de la persona (alt + semilla de respaldo)
-//   semilla -> string estable que identifica a la persona (ej. matrícula)
+//   foto    -> imagen real subida al registrar (data URL); tiene prioridad
+//   nombre  -> nombre de la persona (para las iniciales y el alt)
 //   size    -> lado en px (default 48)
 //   rounded -> clase de borde (default 'rounded-xl'; usa 'rounded-full' si quieres círculo)
 // ============================================================================
-import { useState } from 'react';
 
-export default function FotoPersona({ foto, nombre = '', semilla, size = 48, rounded = 'rounded-xl', className = '' }) {
-  const [fallo, setFallo] = useState(false);
-  const seed = encodeURIComponent(semilla || nombre || '');
+// Paleta de la marca para los avatares de iniciales.
+const COLORES = ['#14274E', '#3F72BF', '#24407A', '#16A34A', '#D97706', '#7C3AED', '#0E7490'];
 
+// Iniciales: primera letra del nombre y del primer apellido (máx. 2).
+function iniciales(nombre = '') {
+  const palabras = String(nombre).trim().split(/\s+/).filter(Boolean);
+  if (palabras.length === 0) return '?';
+  if (palabras.length === 1) return palabras[0].charAt(0).toUpperCase();
+  return (palabras[0].charAt(0) + palabras[1].charAt(0)).toUpperCase();
+}
+
+// Color estable: misma persona → mismo color (suma simple de los caracteres).
+function colorDe(texto = '') {
+  let suma = 0;
+  for (let i = 0; i < texto.length; i++) suma += texto.charCodeAt(i);
+  return COLORES[suma % COLORES.length];
+}
+
+export default function FotoPersona({ foto, nombre = '', size = 48, rounded = 'rounded-xl', className = '' }) {
   // 1º) La foto subida en el registro (si existe) gana siempre.
   if (foto) {
     return (
@@ -33,28 +48,16 @@ export default function FotoPersona({ foto, nombre = '', semilla, size = 48, rou
     );
   }
 
-  if (!fallo && seed) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={`https://i.pravatar.cc/${Math.max(96, size * 2)}?u=${seed}`}
-        alt={nombre || 'Foto de la persona'}
-        onError={() => setFallo(true)}
-        className={`shrink-0 ${rounded} object-cover ${className}`}
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-
-  // Fallback: silueta genérica (mismo look que antes de tener fotos).
+  // 2º) Avatar de iniciales dibujado localmente.
   return (
     <div
-      className={`flex shrink-0 items-center justify-center ${rounded} bg-platino-light text-slate-400 ${className}`}
-      style={{ width: size, height: size }}
+      role="img"
+      aria-label={nombre || 'Sin foto'}
+      title={nombre}
+      className={`flex shrink-0 select-none items-center justify-center ${rounded} font-black text-white ${className}`}
+      style={{ width: size, height: size, backgroundColor: colorDe(nombre), fontSize: Math.round(size * 0.38) }}
     >
-      <svg style={{ width: size * 0.55, height: size * 0.55 }} fill="currentColor" viewBox="0 0 20 20">
-        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-      </svg>
+      {iniciales(nombre)}
     </div>
   );
 }

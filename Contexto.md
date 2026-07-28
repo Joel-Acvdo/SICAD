@@ -31,6 +31,13 @@ SICAD/
 - **Auth:** JWT (login por correo O matrícula) + RBAC (`middlewares/auth.middleware.js`).
 - **Frontend↔Backend:** conectado vía Axios (`src/lib/api.js` adjunta el token). Los slices Redux
   usan `createAsyncThunk`. **Ya NO es localStorage.**
+- **Despliegue distribuido:** SICAD puede correr con frontend, backend y BD en **laptops distintas**
+  (red del laboratorio, Familia 4). Cada servicio localiza a su vecino con una **cascada**:
+  variable de entorno → servicio de Docker → nombre DNS (`backend.fandite.com`, `bd.fandite.com`)
+  → IP fija (`192.168.13.2`, `192.168.13.3`) → `localhost`. La variable de entorno gana siempre,
+  por eso Azure no se ve afectado. Ver `RED-DISTRIBUIDA.md`, `backend/src/config/destinos.js` y
+  `frontend/src/lib/backendDestino.js`. El proxy `/api` del frontend vive en
+  `frontend/src/app/api/[...ruta]/route.js` y **revalida el destino cada 30 s**.
 
 ## Cómo correr
 

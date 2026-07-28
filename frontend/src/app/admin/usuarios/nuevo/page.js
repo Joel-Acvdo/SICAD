@@ -7,6 +7,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { agregarUsuario, cargarUsuarios } from '@/store/userSlice';
 import SelectorCarrera from '@/components/SelectorCarrera';
 import { comprimirImagen } from '@/lib/imagen';
+import { validarFormularioUsuario } from '@/lib/validacionUsuario';
 import TopBar from '@/components/TopBar';
 import Campo from '@/components/Campo';
 
@@ -23,7 +24,8 @@ export default function NuevoUsuario() {
   const [f, setF] = useState({ nombre: '', apellidos: '', correo: '', matricula_empleado: '', carrera: '', tipo: 'ALUMNO', password: '' });
   const [foto, setFoto] = useState(''); // data URL de la foto (opcional)
   const [guardando, setGuardando] = useState(false); // MEJ-06: petición en curso
-  const [errorMsg, setErrorMsg] = useState(''); // MEJ-06: error del servidor o de validación
+  const [errorMsg, setErrorMsg] = useState(''); // error general (duplicados, red…)
+  const [errores, setErrores] = useState({}); // errores POR CAMPO, se pintan bajo cada input
 
   useEffect(() => {
     if (!usuario || usuario.tipo !== 'ADMINISTRATIVO') router.push('/login-admin');
@@ -33,7 +35,11 @@ export default function NuevoUsuario() {
     dispatch(cargarUsuarios());
   }, [dispatch]);
 
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  // Al escribir se limpia el error de ese campo (deja de estar en rojo).
+  const set = (k) => (e) => {
+    setF({ ...f, [k]: e.target.value });
+    if (errores[k]) setErrores((prev) => ({ ...prev, [k]: undefined }));
+  };
 
   // Foto opcional: se recorta y comprime en el navegador (ver lib/imagen.js)
   // y viaja como data URL en el mismo POST.
@@ -46,22 +52,28 @@ export default function NuevoUsuario() {
   const guardar = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    if (!f.nombre || !f.apellidos || !f.correo) {
-      setErrorMsg('Completa nombre, apellidos y correo.');
+
+    // Validación local: marca en rojo TODOS los campos que fallen (obligatorios,
+    // formato, contraseña débil…) sin necesidad de ir al servidor.
+    const fallos = validarFormularioUsuario(f, 'crear');
+    setErrores(fallos);
+    if (Object.keys(fallos).length > 0) {
+      setErrorMsg('Revisa los campos marcados en rojo.');
       return;
     }
+
     setGuardando(true);
     try {
-      // Si dejan la contraseña vacía, se omite para que el backend asigne la temporal.
       const payload = { ...f };
-      if (!payload.password) delete payload.password;
-      if (foto) payload.foto = foto; // opcional
+      if (foto) payload.foto = foto; // la foto es el único campo opcional
       // El backend crea el usuario Y emite su credencial automáticamente.
       await dispatch(agregarUsuario(payload)).unwrap();
       router.push('/admin/usuarios');
     } catch (err) {
-      // MEJ-06: si falla (correo duplicado, contraseña débil…) muestra el error y no navega.
-      setErrorMsg(typeof err === 'string' ? err : 'No se pudo registrar el usuario.');
+      // El backend manda { error, errores } → se pintan bajo cada campo.
+      const porCampo = err?.errores;
+      if (porCampo && typeof porCampo === 'object') setErrores(porCampo);
+      setErrorMsg(err?.error || (typeof err === 'string' ? err : 'No se pudo registrar el usuario.'));
     } finally {
       setGuardando(false);
     }
@@ -90,17 +102,18 @@ export default function NuevoUsuario() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Campo label="Nombre(s)" value={f.nombre} onChange={set('nombre')} placeholder="Ej. Joel Alberto" required />
-            <Campo label="Apellidos" value={f.apellidos} onChange={set('apellidos')} placeholder="Ej. Acevedo Moreno" required />
-            <Campo label="Correo institucional" type="email" value={f.correo} onChange={set('correo')} placeholder="usuario@upa.edu.mx" required />
-            <Campo label="Matrícula / No. de empleado" value={f.matricula_empleado} onChange={set('matricula_empleado')} placeholder="UP230571" />
+            <Campo label="Nombre(s)" value={f.nombre} onChange={set('nombre')} placeholder="Ej. Joel Alberto" error={errores.nombre} />
+            <Campo label="Apellidos" value={f.apellidos} onChange={set('apellidos')} placeholder="Ej. Acevedo Moreno" error={errores.apellidos} />
+            <Campo label="Correo institucional" type="email" value={f.correo} onChange={set('correo')} placeholder="usuario@upa.edu.mx" error={errores.correo} />
+            <Campo label="Matrícula / No. de empleado" value={f.matricula_empleado} onChange={set('matricula_empleado')} placeholder="UP230571" error={errores.matricula_empleado} />
             <SelectorCarrera
               className="sm:col-span-2"
               value={f.carrera}
-              onChange={(carrera) => setF({ ...f, carrera })}
+              onChange={(carrera) => { setF({ ...f, carrera }); if (errores.carrera) setErrores((p) => ({ ...p, carrera: undefined })); }}
               existentes={lista.map((u) => u.carrera)}
+              error={errores.carrera}
             />
-            <Campo className="sm:col-span-2" label="Contraseña" type="password" value={f.password} onChange={set('password')} placeholder="Mín. 8 caracteres con letras y números · vacío = temporal" />
+            <Campo className="sm:col-span-2" label="Contraseña" type="password" name="new-password" autoComplete="new-password" value={f.password} onChange={set('password')} placeholder="Mín. 8 caracteres, con letras y números" error={errores.password} />
 
             {/* Foto opcional para la credencial */}
             <div className="sm:col-span-2">

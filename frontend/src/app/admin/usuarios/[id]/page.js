@@ -10,6 +10,7 @@ import TopBar from '@/components/TopBar';
 import Campo from '@/components/Campo';
 import Badge from '@/components/Badge';
 import SelectorCarrera from '@/components/SelectorCarrera';
+import { validarFormularioUsuario } from '@/lib/validacionUsuario';
 import { comprimirImagen } from '@/lib/imagen';
 import { formatVigencia } from '@/lib/format';
 
@@ -33,7 +34,8 @@ export default function EditarUsuario() {
   const [confirmReem, setConfirmReem] = useState(false); // MEJ-05: confirmar reemisión
   const [reemitiendo, setReemitiendo] = useState(false);
   const [avisoReem, setAvisoReem] = useState('');
-  const [errorGuardar, setErrorGuardar] = useState(''); // error del backend al guardar
+  const [errorGuardar, setErrorGuardar] = useState(''); // error general al guardar
+  const [errores, setErrores] = useState({}); // errores POR CAMPO, bajo cada input
   // Foto: undefined = sin cambios; data URL = nueva; '' = quitarla.
   const [fotoNueva, setFotoNueva] = useState(undefined);
 
@@ -53,6 +55,34 @@ export default function EditarUsuario() {
     }
   }, [inicializado, lista, id, f]);
 
+  // BUG-B: si ya cargó la lista y ese id no existe, se avisa en vez de dejar
+  // la pantalla atorada en "Cargando usuario…" para siempre.
+  if (!f && inicializado && !lista.find((x) => x.id_usuario === id)) {
+    return (
+      <div className="flex min-h-screen flex-col bg-gris-fondo">
+        <TopBar titulo="Servicios Escolares" subtitulo="Editar usuario" onVolver={() => router.push('/admin/usuarios')} />
+        <main className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center px-4 text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-rojo">
+            <svg className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86l-8.48 14.7A2 2 0 003.53 21h16.94a2 2 0 001.72-2.44L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+          </div>
+          <h1 className="text-lg font-black text-marino">Usuario no encontrado</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            No existe un usuario con el identificador <span className="font-mono font-bold">{id}</span>.
+            Puede que lo hayan eliminado o que la dirección esté mal escrita.
+          </p>
+          <button
+            onClick={() => router.push('/admin/usuarios')}
+            className="mt-6 rounded-xl bg-azulmedio px-6 py-3 text-sm font-bold text-white shadow transition hover:bg-marino"
+          >
+            Volver a la gestión de usuarios
+          </button>
+        </main>
+      </div>
+    );
+  }
+
   if (!f) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gris-fondo">
@@ -61,7 +91,11 @@ export default function EditarUsuario() {
     );
   }
 
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  // Al escribir se limpia el error de ese campo (deja de estar en rojo).
+  const set = (k) => (e) => {
+    setF({ ...f, [k]: e.target.value });
+    if (errores[k]) setErrores((prev) => ({ ...prev, [k]: undefined }));
+  };
   const cred = credenciales.find((c) => c.id_usuario === id);
   const activo = f.estatus === 'ACTIVO';
 
@@ -70,6 +104,15 @@ export default function EditarUsuario() {
   const guardar = async (e) => {
     e.preventDefault();
     setErrorGuardar('');
+
+    // Validación local: marca en rojo los campos que fallen antes de enviar.
+    const fallos = validarFormularioUsuario({ ...f, password }, 'editar');
+    setErrores(fallos);
+    if (Object.keys(fallos).length > 0) {
+      setErrorGuardar('Revisa los campos marcados en rojo.');
+      return;
+    }
+
     const campos = {
       id_usuario: id,
       nombre: f.nombre,
@@ -85,7 +128,10 @@ export default function EditarUsuario() {
       await dispatch(actualizarUsuario(campos)).unwrap();
       router.push('/admin/usuarios');
     } catch (err) {
-      setErrorGuardar(typeof err === 'string' ? err : 'No se pudieron guardar los cambios.');
+      // El backend manda { error, errores } → se pintan bajo cada campo.
+      const porCampo = err?.errores;
+      if (porCampo && typeof porCampo === 'object') setErrores(porCampo);
+      setErrorGuardar(err?.error || (typeof err === 'string' ? err : 'No se pudieron guardar los cambios.'));
     }
   };
 
@@ -138,17 +184,18 @@ export default function EditarUsuario() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Campo label="Nombre(s)" value={f.nombre} onChange={set('nombre')} required />
-            <Campo label="Apellidos" value={f.apellidos} onChange={set('apellidos')} required />
-            <Campo label="Correo institucional" type="email" value={f.correo} onChange={set('correo')} required />
-            <Campo label="Matrícula / No. de empleado" value={f.matricula_empleado || ''} onChange={set('matricula_empleado')} />
+            <Campo label="Nombre(s)" value={f.nombre} onChange={set('nombre')} error={errores.nombre} />
+            <Campo label="Apellidos" value={f.apellidos} onChange={set('apellidos')} error={errores.apellidos} />
+            <Campo label="Correo institucional" type="email" value={f.correo} onChange={set('correo')} error={errores.correo} />
+            <Campo label="Matrícula / No. de empleado" value={f.matricula_empleado || ''} onChange={set('matricula_empleado')} placeholder="UP230571" error={errores.matricula_empleado} />
             <SelectorCarrera
               className="sm:col-span-2"
               value={f.carrera || ''}
-              onChange={(carrera) => setF({ ...f, carrera })}
+              onChange={(carrera) => { setF({ ...f, carrera }); if (errores.carrera) setErrores((p) => ({ ...p, carrera: undefined })); }}
               existentes={lista.map((u) => u.carrera)}
+              error={errores.carrera}
             />
-            <Campo className="sm:col-span-2" label="Nueva contraseña (opcional)" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Déjala vacía para no cambiarla" />
+            <Campo className="sm:col-span-2" label="Nueva contraseña (opcional)" type="password" name="new-password" autoComplete="new-password" value={password} onChange={(e) => { setPassword(e.target.value); if (errores.password) setErrores((p) => ({ ...p, password: undefined })); }} placeholder="Déjala vacía para no cambiarla" error={errores.password} />
 
             {/* Foto del usuario (cambiar o quitar) */}
             <div className="sm:col-span-2">

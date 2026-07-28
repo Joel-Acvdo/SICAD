@@ -16,19 +16,21 @@ import { LogoInsignia } from './Logo';
 
 export default function TopBar({ titulo, subtitulo, onVolver, onSalir, derecha, dark }) {
   return (
-    <header className={`${dark ? 'bg-marino-dark' : 'bg-marino'} px-4 py-3 text-white shadow-md`}>
-      <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
-        {/* Lado izquierdo: (volver) + logo SICAD + título/subtítulo */}
-        <div className="flex min-w-0 items-center gap-3">
+    <header className={`${dark ? 'bg-marino-dark' : 'bg-marino'} px-3 py-3 text-white shadow-md sm:px-4`}>
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 sm:gap-3">
+        {/* Lado izquierdo: (volver) + logo SICAD + título/subtítulo.
+            min-w-0 + truncate permiten que el título se recorte antes de
+            empujar los botones de la derecha fuera de la pantalla. */}
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           {onVolver && (
-            <button onClick={onVolver} aria-label="Volver" className="rounded-lg bg-white/10 p-2 transition hover:bg-white/20">
+            <button onClick={onVolver} aria-label="Volver" className="shrink-0 rounded-lg bg-white/10 p-2 transition hover:bg-white/20">
               <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </button>
           )}
           {/* Logo de la app (insignia QR) + nombre SICAD al lado */}
-          <LogoInsignia size={32} fondo="#3F72BF" />
+          <div className="shrink-0"><LogoInsignia size={32} fondo="#3F72BF" /></div>
           <div className="min-w-0">
             <p className="truncate text-sm font-extrabold tracking-wide sm:text-base">
               SICAD{titulo && titulo !== 'SICAD' && <span className="font-semibold text-platino"> · {titulo}</span>}
@@ -36,14 +38,16 @@ export default function TopBar({ titulo, subtitulo, onVolver, onSalir, derecha, 
             {subtitulo && <p className="truncate text-[11px] text-platino">{subtitulo}</p>}
           </div>
         </div>
-        {/* Lado derecho: contenido personalizado, o el botón Salir */}
-        {derecha
-          ? derecha
-          : onSalir && (
-              <button onClick={onSalir} className="shrink-0 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold transition hover:bg-white hover:text-marino">
-                Salir
-              </button>
-            )}
+        {/* Lado derecho: nunca se encoge ni se sale de la pantalla */}
+        <div className="flex shrink-0 items-center gap-2">
+          {derecha
+            ? derecha
+            : onSalir && (
+                <button onClick={onSalir} className="rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-bold transition hover:bg-white hover:text-marino">
+                  Salir
+                </button>
+              )}
+        </div>
       </div>
     </header>
   );

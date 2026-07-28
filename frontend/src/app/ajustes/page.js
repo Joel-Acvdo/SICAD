@@ -80,7 +80,7 @@ export default function Ajustes() {
       <main className="mx-auto w-full max-w-xl flex-1 px-4 py-8">
         {/* Quién soy */}
         <div className="mb-6 flex items-center gap-4 rounded-2xl border border-platino-light bg-white p-4 shadow-sm">
-          <FotoPersona foto={usuario.foto} nombre={nombreCompleto(usuario)} semilla={usuario.matricula_empleado || usuario.correo} size={56} rounded="rounded-2xl" />
+          <FotoPersona foto={usuario.foto} nombre={nombreCompleto(usuario)} size={56} rounded="rounded-2xl" />
           <div className="min-w-0">
             <p className="truncate font-black text-marino">{nombreCompleto(usuario)}</p>
             <p className="truncate text-xs text-slate-500">{usuario.matricula_empleado || usuario.correo}</p>
@@ -93,9 +93,9 @@ export default function Ajustes() {
           <p className="mb-4 text-xs text-slate-500">Mínimo 8 caracteres, combinando letras y números.</p>
 
           <div className="space-y-4">
-            <Campo label="Contraseña actual" type="password" value={actual} onChange={(e) => setActual(e.target.value)} required />
-            <Campo label="Contraseña nueva" type="password" value={nueva} onChange={(e) => setNueva(e.target.value)} required />
-            <Campo label="Confirmar contraseña nueva" type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} required />
+            <Campo label="Contraseña actual" type="password" name="current-password" autoComplete="current-password" value={actual} onChange={(e) => setActual(e.target.value)} required />
+            <Campo label="Contraseña nueva" type="password" name="new-password" autoComplete="new-password" value={nueva} onChange={(e) => setNueva(e.target.value)} required />
+            <Campo label="Confirmar contraseña nueva" type="password" name="confirm-password" autoComplete="new-password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} required />
           </div>
 
           {mensaje && (

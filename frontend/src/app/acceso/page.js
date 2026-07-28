@@ -11,6 +11,7 @@ import { cargarUsuarios } from '@/store/userSlice';
 import { validarAccesoQr } from '@/store/accessSlice';
 import TopBar from '@/components/TopBar';
 import QrScanner from '@/components/QrScanner';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { horaActual, nombreCompleto } from '@/lib/format';
 
 const PUNTO = 'Entrada Principal';
@@ -110,11 +111,24 @@ export default function TerminalAcceso() {
             <p className="mb-4 max-w-xs text-xs leading-relaxed text-slate-500">
               Coloca el código QR de la credencial frente a la cámara.
             </p>
+            {/* BUG-C: si la cámara falla (sin permiso, sin cámara, HTTP…) se
+                muestra el aviso y la terminal sigue viva, sin "Application error". */}
             {!camaraError ? (
-              <QrScanner onScan={onScan} onError={setCamaraError} />
+              <ErrorBoundary
+                respaldo={
+                  <div className="w-full rounded-2xl border border-red-100 bg-red-50 p-4 text-xs text-rojo">
+                    No se pudo iniciar el lector de QR en este dispositivo. Registra la entrada
+                    a mano desde <b>Validar</b>.
+                  </div>
+                }
+              >
+                <QrScanner onScan={onScan} onError={setCamaraError} />
+              </ErrorBoundary>
             ) : (
               <div className="w-full rounded-2xl border border-red-100 bg-red-50 p-4 text-xs text-rojo">
-                {camaraError}
+                <p className="font-bold">No se puede usar la cámara</p>
+                <p className="mt-1">{camaraError}</p>
+                <p className="mt-2 text-slate-500">Puedes registrar la entrada a mano desde <b>Validar</b>.</p>
               </div>
             )}
           </div>
