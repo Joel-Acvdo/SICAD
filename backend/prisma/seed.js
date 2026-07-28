@@ -52,7 +52,7 @@ async function main() {
     porMatricula[u.matricula_empleado] = usuario;
   }
 
-  // --- Credenciales de la comunidad (upsert por codigo_qr) ---
+  // --- Credenciales de la comunidad (una por usuario) ---
   // OBS-03: los códigos son OPACOS (no llevan la matrícula dentro). Aquí son
   // fijos para que el seed sea reproducible; los que emite la app en caliente
   // se generan al azar (ver src/utils/codigoQr.js).
@@ -66,13 +66,22 @@ async function main() {
     { codigo_qr: QR_DOCENTE, estado: 'ACTIVA', matricula: 'EMP0123', vence: new Date('2027-08-31T23:59:59.000Z') },
     { codigo_qr: QR_REVOCADA, estado: 'REVOCADA', matricula: 'UP229988', vence: new Date('2025-12-31T23:59:59.000Z') },
   ];
+  // Se identifica por USUARIO, no por código: cada persona tiene una sola
+  // credencial. (Antes el upsert iba por codigo_qr y, al cambiar los códigos,
+  // el seed creaba una credencial nueva en vez de actualizar la existente.)
   for (const c of credenciales) {
     const usuario = porMatricula[c.matricula];
-    await prisma.credencial.upsert({
-      where: { codigo_qr: c.codigo_qr },
-      update: { estado: c.estado, fecha_vencimiento: c.vence, id_usuario: usuario.id_usuario },
-      create: { codigo_qr: c.codigo_qr, estado: c.estado, fecha_vencimiento: c.vence, id_usuario: usuario.id_usuario },
-    });
+    const existente = await prisma.credencial.findFirst({ where: { id_usuario: usuario.id_usuario } });
+    if (existente) {
+      await prisma.credencial.update({
+        where: { id_credencial: existente.id_credencial },
+        data: { codigo_qr: c.codigo_qr, estado: c.estado, fecha_vencimiento: c.vence },
+      });
+    } else {
+      await prisma.credencial.create({
+        data: { codigo_qr: c.codigo_qr, estado: c.estado, fecha_vencimiento: c.vence, id_usuario: usuario.id_usuario },
+      });
+    }
   }
 
   // --- Puntos de acceso ---
