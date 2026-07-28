@@ -52,6 +52,7 @@ export default function BitacoraServicios() {
   const rangoInvertido = !!(rango.desde && rango.hasta && rango.desde > rango.hasta);
 
   // Atajo "Solo hoy": llena ambas fechas con el día en curso y aplica de una vez.
+  // (se conserva por compatibilidad con el resto de la pantalla)
   const hoyStr = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -70,10 +71,12 @@ export default function BitacoraServicios() {
         {/* Filtros por fecha */}
         <div className="mb-5 flex flex-wrap items-end gap-3">
           <label className="text-xs font-bold text-marino">Desde
-            <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="mt-1 block rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none focus:border-azulmedio" />
+            {/* "desde" no puede ser posterior a "hasta" */}
+            <input type="date" value={desde} max={hasta || undefined} onChange={(e) => setDesde(e.target.value)} className="mt-1 block rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none focus:border-azulmedio" />
           </label>
           <label className="text-xs font-bold text-marino">Hasta
-            <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="mt-1 block rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none focus:border-azulmedio" />
+            {/* "hasta" no puede ser anterior a "desde" */}
+            <input type="date" value={hasta} min={desde || undefined} onChange={(e) => setHasta(e.target.value)} className="mt-1 block rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none focus:border-azulmedio" />
           </label>
           <button onClick={aplicarFiltro} className="rounded-xl bg-marino px-5 py-2.5 text-sm font-bold text-white transition hover:bg-marino-light">Filtrar</button>
           <button

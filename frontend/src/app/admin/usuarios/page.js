@@ -12,7 +12,7 @@ import TopBar from '@/components/TopBar';
 import Badge from '@/components/Badge';
 import Modal from '@/components/Modal';
 import FotoPersona from '@/components/FotoPersona';
-import { formatVigencia, nombreCompleto, coincide } from '@/lib/format';
+import { formatVigencia, nombreCompleto, coincide, hoyISO, maximoISO } from '@/lib/format';
 
 const IcoEditar = (p) => (<svg {...p} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>);
 const IcoRenovar = (p) => (<svg {...p} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>);
@@ -30,7 +30,8 @@ export default function GestionUsuarios() {
   const [busqueda, setBusqueda] = useState('');
   const [filtro, setFiltro] = useState('TODOS');
   const [modal, setModal] = useState(null); // { tipo, usuario }
-  const [renovarMeses, setRenovarMeses] = useState(12); // periodo elegido en el modal de renovar
+  const [renovarMeses, setRenovarMeses] = useState(12); // 12 | 6 | 'fecha'
+  const [fechaRenovar, setFechaRenovar] = useState(''); // fecha exacta de vencimiento
 
   useEffect(() => {
     dispatch(cargarUsuarios());
@@ -50,9 +51,14 @@ export default function GestionUsuarios() {
   }
 
   const credDe = (id) => credenciales.find((c) => c.id_usuario === id);
+  // La vigencia depende del usuario Y de su credencial: si el alumno reportó la
+  // suya como perdida, la credencial queda REVOCADA aunque él siga activo, y
+  // eso debe verse aquí (antes seguía mostrando la fecha como si nada).
   const vigenciaDe = (u) => {
     const c = credDe(u.id_usuario);
     if (u.estatus !== 'ACTIVO') return { txt: 'Revocada', rojo: true };
+    if (c && c.estado === 'REVOCADA') return { txt: 'Reportada como perdida', rojo: true };
+    if (c && c.estado === 'VENCIDA') return { txt: 'Vencida', rojo: true };
     return { txt: c ? formatVigencia(c.fecha_vencimiento) : '—', rojo: false };
   };
 
@@ -78,17 +84,25 @@ export default function GestionUsuarios() {
     dispatch(cargarAccesosYCredenciales());
     setModal({ tipo: 'activado', usuario: { ...u, estatus: 'ACTIVO' } });
   };
-  // Aplica la renovación: el backend suma "meses" a la vigencia de la credencial.
-  const renovar = (u, meses = 12) => {
-    dispatch(renovarVigencia({ id_usuario: u.id_usuario, meses }));
+  // Aplica la renovación: por meses a sumar, o fijando una fecha exacta.
+  const renovar = (u, periodo = 12) => {
+    const payload =
+      periodo === 'fecha'
+        ? { id_usuario: u.id_usuario, fecha_vencimiento: fechaRenovar }
+        : { id_usuario: u.id_usuario, meses: periodo };
+    dispatch(renovarVigencia(payload));
     setModal(null);
+    setFechaRenovar('');
   };
 
   // Calcula (sin aplicar) cómo quedaría la nueva vigencia, para mostrarla en el modal.
-  const nuevaVigencia = (u, meses = 12) => {
+  const nuevaVigencia = (u, periodo = 12) => {
+    if (periodo === 'fecha') {
+      return fechaRenovar ? formatVigencia(`${fechaRenovar}T12:00:00`) : 'Elige una fecha';
+    }
     const c = credDe(u.id_usuario);
     const base = c ? new Date(c.fecha_vencimiento) : new Date();
-    base.setMonth(base.getMonth() + meses);
+    base.setMonth(base.getMonth() + periodo);
     return formatVigencia(base.toISOString());
   };
 
@@ -259,11 +273,11 @@ export default function GestionUsuarios() {
               </div>
             </div>
 
-            {/* Selector de periodo */}
+            {/* Selector de periodo: por meses o eligiendo una fecha exacta */}
             <div className="mt-4 w-full">
               <p className="mb-1.5 text-left text-xs font-bold text-marino">Periodo de renovación</p>
-              <div className="grid grid-cols-2 gap-2 rounded-xl bg-platino-light p-1">
-                {[{ m: 12, t: '+ 1 año' }, { m: 6, t: '+ 6 meses' }].map((o) => (
+              <div className="grid grid-cols-3 gap-2 rounded-xl bg-platino-light p-1">
+                {[{ m: 12, t: '+ 1 año' }, { m: 6, t: '+ 6 meses' }, { m: 'fecha', t: 'Elegir fecha' }].map((o) => (
                   <button key={o.m} onClick={() => setRenovarMeses(o.m)} className={`rounded-lg py-2 text-xs font-bold transition ${renovarMeses === o.m ? 'bg-marino text-white shadow' : 'text-marino hover:bg-white'}`}>
                     {o.t}
                   </button>
@@ -271,9 +285,31 @@ export default function GestionUsuarios() {
               </div>
             </div>
 
+            {/* Fecha exacta de vencimiento (máximo 2 años) */}
+            {renovarMeses === 'fecha' && (
+              <div className="mt-3 w-full text-left">
+                <label className="mb-1.5 block text-xs font-bold text-marino">Vence el</label>
+                <input
+                  type="date"
+                  value={fechaRenovar}
+                  min={hoyISO()}
+                  max={maximoISO()}
+                  onChange={(e) => setFechaRenovar(e.target.value)}
+                  className="w-full rounded-xl border border-platino bg-white px-3 py-2.5 text-sm outline-none transition focus:border-azulmedio"
+                />
+                <p className="mt-1 text-[10px] text-slate-400">La vigencia no puede pasar de 2 años.</p>
+              </div>
+            )}
+
             <div className="mt-6 flex w-full gap-3">
               <button onClick={() => setModal(null)} className="flex-1 rounded-xl border border-platino bg-white py-3 text-sm font-bold text-marino hover:bg-platino-light">Cancelar</button>
-              <button onClick={() => renovar(modal.usuario, renovarMeses)} className="flex-1 rounded-xl bg-azulmedio py-3 text-sm font-bold text-white hover:bg-marino">Renovar credencial</button>
+              <button
+                onClick={() => renovar(modal.usuario, renovarMeses)}
+                disabled={renovarMeses === 'fecha' && !fechaRenovar}
+                className="flex-1 rounded-xl bg-azulmedio py-3 text-sm font-bold text-white transition hover:bg-marino disabled:opacity-50"
+              >
+                Renovar credencial
+              </button>
             </div>
           </div>
         </Modal>

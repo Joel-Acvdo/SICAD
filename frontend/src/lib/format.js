@@ -1,12 +1,14 @@
 // Utilidades de formato para fechas y nombres (modo demo).
 
-// Vigencia en formato MM/AAAA.
+// Vigencia con día incluido: DD/MM/AAAA (antes solo mostraba mes y año).
 export function formatVigencia(dateStr) {
   try {
     const d = new Date(dateStr);
-    return `${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+    const dia = String(d.getDate()).padStart(2, '0');
+    const mes = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dia}/${mes}/${d.getFullYear()}`;
   } catch {
-    return '12/2026';
+    return '31/12/2026';
   }
 }
 
@@ -26,6 +28,31 @@ export function formatFechaHora(dateStr) {
   } catch {
     return 'Hoy · 08:00';
   }
+}
+
+// ---------------------------------------------------------------------------
+// Fechas en formato AAAA-MM-DD, que es el que entienden los <input type="date">.
+// ---------------------------------------------------------------------------
+export function aISO(fecha) {
+  const d = fecha instanceof Date ? fecha : new Date(fecha);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Hoy (mínimo permitido al elegir una vigencia).
+export const hoyISO = () => aISO(new Date());
+
+// Hoy + 2 años (máximo permitido: la vigencia no puede pasar de 2 años).
+export function maximoISO() {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() + 2);
+  return aISO(d);
+}
+
+// Hace N días (para los presets de los filtros: "últimos 7 días").
+export function haceDiasISO(dias) {
+  const d = new Date();
+  d.setDate(d.getDate() - dias);
+  return aISO(d);
 }
 
 export function horaActual() {
