@@ -13,7 +13,7 @@ import TabsCaseta from '@/components/TabsCaseta';
 import Badge from '@/components/Badge';
 import Modal from '@/components/Modal';
 import FotoPersona from '@/components/FotoPersona';
-import { nombreCompleto, formatFechaHora } from '@/lib/format';
+import { nombreCompleto, formatFechaHora, coincide, normalizarTexto } from '@/lib/format';
 
 export default function ValidarAlumno() {
   const router = useRouter();
@@ -25,6 +25,7 @@ export default function ValidarAlumno() {
   const [q, setQ] = useState('');
   const [registrado, setRegistrado] = useState(null); // {id, tipo}
   const [confirmDoble, setConfirmDoble] = useState(null); // {u, ult} aviso de doble entrada
+  const [veredicto, setVeredicto] = useState(null); // {u, valido} veredicto grande para el guardia
 
   useEffect(() => {
     dispatch(cargarUsuarios());
@@ -37,11 +38,9 @@ export default function ValidarAlumno() {
   if (!usuario) return null;
 
   const comunidad = lista.filter((u) => ['ALUMNO', 'DOCENTE', 'TRABAJADOR'].includes(u.tipo));
-  const resultados = q.trim()
-    ? comunidad.filter((u) =>
-        nombreCompleto(u).toLowerCase().includes(q.toLowerCase()) ||
-        u.matricula_empleado?.toLowerCase().includes(q.toLowerCase())
-      )
+  // Búsqueda tolerante: ignora acentos, mayúsculas y caracteres especiales.
+  const resultados = normalizarTexto(q)
+    ? comunidad.filter((u) => coincide(nombreCompleto(u), q) || coincide(u.matricula_empleado || '', q))
     : [];
 
   const credDe = (id) => credenciales.find((c) => c.id_usuario === id);
@@ -52,6 +51,8 @@ export default function ValidarAlumno() {
     accesos.find((a) => a.id_usuario === id && a.resultado === 'PERMITIDO') || null;
 
   // Registra la ENTRADA en la bitácora (el sistema solo maneja entradas).
+  // OBS-10: además del aviso en la ficha, se muestra un VEREDICTO grande para
+  // que el guardia vea de un vistazo si deja pasar o no.
   const doRegistrar = (u) => {
     const valido = vigente(u);
     dispatch(registrarAcceso({
@@ -61,6 +62,7 @@ export default function ValidarAlumno() {
       id_usuario: u.id_usuario,
     }));
     setRegistrado({ id: u.id_usuario, valido });
+    setVeredicto({ u, valido });
     setTimeout(() => setRegistrado(null), 2500);
   };
 
@@ -121,7 +123,7 @@ export default function ValidarAlumno() {
             return (
               <div key={u.id_usuario} className="rounded-2xl border border-platino-light bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-4">
-                  <FotoPersona foto={u.foto} nombre={nombreCompleto(u)} semilla={u.matricula_empleado || u.correo} size={56} />
+                  <FotoPersona foto={u.foto} nombre={nombreCompleto(u)} size={56} />
                   <div className="min-w-0 flex-1">
                     <p className="font-black text-marino">{nombreCompleto(u)}</p>
                     <p className="text-xs text-slate-500">{u.matricula_empleado} · {u.carrera || u.tipo}</p>
@@ -134,7 +136,16 @@ export default function ValidarAlumno() {
                     Entrada {reg.valido ? 'registrada' : 'denegada'} · queda en la bitácora.
                   </div>
                 ) : (
-                  <button onClick={() => registrar(u)} className="mt-3 w-full rounded-xl bg-azulmedio py-2.5 text-sm font-bold text-white transition hover:bg-marino">Registrar entrada</button>
+                  // OBS-11: si la credencial NO está vigente, el botón avisa que
+                  // el registro quedará DENEGADO (antes se veía igual que el normal).
+                  <button
+                    onClick={() => registrar(u)}
+                    className={`mt-3 w-full rounded-xl py-2.5 text-sm font-bold text-white transition ${
+                      ok ? 'bg-azulmedio hover:bg-marino' : 'bg-rojo hover:opacity-90'
+                    }`}
+                  >
+                    {ok ? 'Registrar entrada' : 'Registrar intento (será denegado)'}
+                  </button>
                 )}
               </div>
             );
@@ -143,6 +154,33 @@ export default function ValidarAlumno() {
 
         <p className="mt-6 text-xs text-slate-400">El acceso manual queda registrado en la bitácora igual que un acceso por QR.</p>
       </main>
+
+      {/* OBS-10: veredicto GRANDE para el guardia (permitido / denegado) */}
+      {veredicto && (
+        <div
+          onClick={() => setVeredicto(null)}
+          className={`fixed inset-0 z-50 flex animate-fade-in cursor-pointer flex-col items-center justify-center p-6 text-center text-white ${veredicto.valido ? 'bg-verde' : 'bg-rojo'}`}
+        >
+          <div className="flex h-28 w-28 items-center justify-center rounded-full bg-white/20 ring-8 ring-white/10">
+            <svg className="h-14 w-14" fill="none" stroke="currentColor" strokeWidth={3.5} viewBox="0 0 24 24">
+              {veredicto.valido
+                ? <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                : <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />}
+            </svg>
+          </div>
+          <h2 className="mt-6 text-3xl font-black tracking-wide">
+            {veredicto.valido ? 'PERMITIDO' : 'DENEGADO'}
+          </h2>
+          <p className="mt-2 text-lg font-bold">{nombreCompleto(veredicto.u)}</p>
+          <p className="text-sm text-white/85">{veredicto.u.matricula_empleado || '—'}</p>
+          <p className="mt-4 text-sm font-semibold text-white/90">
+            {veredicto.valido ? 'Puede pasar · entrada registrada' : 'NO puede pasar · credencial no vigente'}
+          </p>
+          <button className="mt-8 w-full max-w-xs rounded-xl bg-white py-3 font-bold shadow-lg" style={{ color: veredicto.valido ? '#16A34A' : '#DC2626' }}>
+            Continuar
+          </button>
+        </div>
+      )}
 
       {/* MEJ-01: aviso de posible doble entrada sin salida previa */}
       {confirmDoble && (

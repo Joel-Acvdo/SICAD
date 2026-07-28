@@ -12,7 +12,7 @@ import TopBar from '@/components/TopBar';
 import Badge from '@/components/Badge';
 import Modal from '@/components/Modal';
 import FotoPersona from '@/components/FotoPersona';
-import { formatVigencia, nombreCompleto } from '@/lib/format';
+import { formatVigencia, nombreCompleto, coincide } from '@/lib/format';
 
 const IcoEditar = (p) => (<svg {...p} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>);
 const IcoRenovar = (p) => (<svg {...p} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>);
@@ -56,13 +56,13 @@ export default function GestionUsuarios() {
     return { txt: c ? formatVigencia(c.fecha_vencimiento) : '—', rojo: false };
   };
 
+  // Búsqueda tolerante: ignora acentos, mayúsculas y caracteres especiales.
   const usuarios = lista.filter((u) => {
-    const q = busqueda.toLowerCase();
-    const coincide =
-      nombreCompleto(u).toLowerCase().includes(q) ||
-      u.matricula_empleado?.toLowerCase().includes(q) ||
-      u.correo.toLowerCase().includes(q);
-    return coincide && (filtro === 'TODOS' || u.tipo === filtro);
+    const hallado =
+      coincide(nombreCompleto(u), busqueda) ||
+      coincide(u.matricula_empleado || '', busqueda) ||
+      coincide(u.correo, busqueda);
+    return hallado && (filtro === 'TODOS' || u.tipo === filtro);
   });
 
   // Acciones
@@ -171,7 +171,7 @@ export default function GestionUsuarios() {
                   <tr key={u.id_usuario} className="border-b border-platino-light last:border-0 hover:bg-platino-light/30">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
-                        <FotoPersona foto={u.foto} nombre={nombreCompleto(u)} semilla={u.matricula_empleado || u.correo} size={40} />
+                        <FotoPersona foto={u.foto} nombre={nombreCompleto(u)} size={40} />
                         <div>
                           <p className="font-bold text-marino">{nombreCompleto(u)}</p>
                           <p className="text-xs text-slate-400">{u.matricula_empleado}</p>
@@ -188,7 +188,7 @@ export default function GestionUsuarios() {
                         {activo ? (
                           <BotonIcono onClick={() => setModal({ tipo: 'revocar', usuario: u })} titulo="Revocar" bg="bg-red-50" color="text-rojo"><IcoX className="h-4 w-4" /></BotonIcono>
                         ) : (
-                          <BotonIcono onClick={() => activar(u)} titulo="Reactivar" bg="bg-green-50" color="text-verde"><IcoCheck className="h-4 w-4" /></BotonIcono>
+                          <BotonIcono onClick={() => setModal({ tipo: 'reactivar', usuario: u })} titulo="Reactivar" bg="bg-green-50" color="text-verde"><IcoCheck className="h-4 w-4" /></BotonIcono>
                         )}
                       </div>
                     </td>
@@ -207,7 +207,7 @@ export default function GestionUsuarios() {
             return (
               <div key={u.id_usuario} className="rounded-2xl border border-platino-light bg-white p-4 shadow-sm">
                 <div className="flex items-center gap-3">
-                  <FotoPersona foto={u.foto} nombre={nombreCompleto(u)} semilla={u.matricula_empleado || u.correo} size={44} />
+                  <FotoPersona foto={u.foto} nombre={nombreCompleto(u)} size={44} />
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-marino">{nombreCompleto(u)}</p>
                     <p className="text-xs text-slate-400">{u.matricula_empleado} · {u.tipo}</p>
@@ -221,7 +221,7 @@ export default function GestionUsuarios() {
                   {activo ? (
                     <BtnMovil onClick={() => setModal({ tipo: 'revocar', usuario: u })} bg="bg-red-50" color="text-rojo"><IcoX className="h-4 w-4" /> Revocar</BtnMovil>
                   ) : (
-                    <BtnMovil onClick={() => activar(u)} bg="bg-green-50" color="text-verde"><IcoCheck className="h-4 w-4" /> Activar</BtnMovil>
+                    <BtnMovil onClick={() => setModal({ tipo: 'reactivar', usuario: u })} bg="bg-green-50" color="text-verde"><IcoCheck className="h-4 w-4" /> Activar</BtnMovil>
                   )}
                 </div>
               </div>
@@ -294,6 +294,26 @@ export default function GestionUsuarios() {
             <div className="mt-6 flex w-full gap-3">
               <button onClick={() => setModal(null)} className="flex-1 rounded-xl border border-platino bg-white py-3 text-sm font-bold text-marino hover:bg-platino-light">Cancelar</button>
               <button onClick={() => revocar(modal.usuario)} className="flex-1 rounded-xl bg-rojo py-3 text-sm font-bold text-white hover:opacity-90">Sí, revocar</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* OBS-06: reactivar también pide confirmación (antes era inmediato) */}
+      {modal?.tipo === 'reactivar' && (
+        <Modal onClose={() => setModal(null)}>
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-verde">
+              <IcoCheck className="h-8 w-8" />
+            </div>
+            <h3 className="text-lg font-black text-marino">¿Reactivar el acceso?</h3>
+            <p className="mt-2 text-sm text-slate-500">
+              <b>{nombreCompleto(modal.usuario)}</b> ({modal.usuario.matricula_empleado || 'sin matrícula'}) volverá
+              a tener acceso al campus y su credencial quedará activa de inmediato.
+            </p>
+            <div className="mt-6 flex w-full gap-3">
+              <button onClick={() => setModal(null)} className="flex-1 rounded-xl border border-platino bg-white py-3 text-sm font-bold text-marino hover:bg-platino-light">Cancelar</button>
+              <button onClick={() => activar(modal.usuario)} className="flex-1 rounded-xl bg-verde py-3 text-sm font-bold text-white hover:opacity-90">Sí, reactivar</button>
             </div>
           </div>
         </Modal>

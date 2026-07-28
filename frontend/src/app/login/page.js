@@ -51,8 +51,9 @@ export default function LoginAlumnos() {
         <p className="mb-6 text-center text-sm text-slate-500">Alumnos y personal</p>
 
         <form onSubmit={onSubmit} className="space-y-4">
-          <Campo label="Matrícula o correo" value={identificador} onChange={(e) => setIdentificador(e.target.value)} placeholder="UP230571 o joel.acevedo@upa.edu.mx" required />
-          <Campo label="Contraseña" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
+          {/* OBS-01: name + autoComplete para el autocompletado y la accesibilidad */}
+          <Campo label="Matrícula o correo" name="username" autoComplete="username" value={identificador} onChange={(e) => setIdentificador(e.target.value)} placeholder="UP230571 o joel.acevedo@upa.edu.mx" required />
+          <Campo label="Contraseña" type="password" name="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" required />
 
           {/* El error viene del estado global (authSlice) si el usuario no existe. */}
           {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-rojo">{error}</p>}

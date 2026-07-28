@@ -57,10 +57,10 @@ export default function CredencialDigital() {
         if (top && top.id_acceso > ultimoIdRef.current) {
           ultimoIdRef.current = top.id_acceso;
           dispatch(cargarMiCredencial()); // refresca el historial en pantalla
-          if (top.resultado === 'PERMITIDO') {
-            setMostrarQR(false); // cierra el QR: ya pasó
-            setConfirmAcceso(top);
-          }
+          // Se avisa tanto si le permitieron el paso como si se lo negaron:
+          // el alumno debe enterarse en su propio celular.
+          setMostrarQR(false); // cierra el QR: ya lo escanearon
+          setConfirmAcceso(top);
         }
       } catch {} // sin red un momento: se reintenta en el siguiente tick
     };
@@ -144,7 +144,7 @@ export default function CredencialDigital() {
               <FotoPersona
                 foto={usuario.foto}
                 nombre={nombreCompleto(usuario)}
-                semilla={usuario.matricula_empleado || usuario.correo}
+               
                 size={64}
                 rounded="rounded-2xl"
                 className="border border-white/20"
@@ -168,12 +168,19 @@ export default function CredencialDigital() {
 
           {/* Botones de acción */}
           <div className="mt-5 grid w-full max-w-sm grid-cols-2 gap-3">
+            {/* BUG-A: cuando la credencial no está activa, el botón se ve
+                claramente inhabilitado y dice por qué (ya no es un botón muerto). */}
             <button
               onClick={() => setMostrarQR(true)}
               disabled={cred.estado !== 'ACTIVA'}
-              className="rounded-xl bg-azulmedio py-3 text-sm font-bold text-white shadow transition hover:bg-marino disabled:opacity-50"
+              title={cred.estado !== 'ACTIVA' ? 'Tu credencial no está activa' : 'Mostrar tu código QR'}
+              className={`rounded-xl py-3 text-sm font-bold shadow transition ${
+                cred.estado === 'ACTIVA'
+                  ? 'bg-azulmedio text-white hover:bg-marino'
+                  : 'cursor-not-allowed border border-platino bg-platino-light text-slate-400 shadow-none'
+              }`}
             >
-              Mostrar código QR
+              {cred.estado === 'ACTIVA' ? 'Mostrar código QR' : 'QR no disponible'}
             </button>
             <button
               onClick={() => setModalPerdida(true)}
@@ -216,28 +223,43 @@ export default function CredencialDigital() {
         </section>
       </main>
 
-      {/* Confirmación en el celular del alumno: la caseta acaba de permitir su entrada */}
-      {confirmAcceso && (
-        <div className="fixed inset-0 z-50 flex animate-fade-in flex-col items-center justify-center bg-verde p-6 text-center text-white">
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/20 ring-8 ring-white/10">
-            <svg className="h-12 w-12" fill="none" stroke="currentColor" strokeWidth={3.5} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+      {/* Resultado en el celular del alumno: la caseta acaba de escanear su QR.
+          Verde = entrada registrada · Rojo = acceso denegado (con el motivo). */}
+      {confirmAcceso && (() => {
+        const permitido = confirmAcceso.resultado === 'PERMITIDO';
+        return (
+          <div className={`fixed inset-0 z-50 flex animate-fade-in flex-col items-center justify-center p-6 text-center text-white ${permitido ? 'bg-verde' : 'bg-rojo'}`}>
+            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/20 ring-8 ring-white/10">
+              <svg className="h-12 w-12" fill="none" stroke="currentColor" strokeWidth={3.5} viewBox="0 0 24 24">
+                {permitido
+                  ? <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  : <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />}
+              </svg>
+            </div>
+            <h2 className="mt-6 text-2xl font-black tracking-wide">
+              {permitido ? 'ENTRADA REGISTRADA' : 'ACCESO DENEGADO'}
+            </h2>
+            <p className="mt-1 text-sm font-semibold text-white/90">
+              {permitido ? `Bienvenido, ${usuario.nombre} 👋` : 'No puedes ingresar al campus'}
+            </p>
+            <div className="mt-6 w-full max-w-xs space-y-2 rounded-2xl bg-white/15 p-4 text-left text-sm">
+              <div className="flex justify-between"><span className="text-white/75">Punto:</span><span className="font-bold">{confirmAcceso.punto_nombre}</span></div>
+              <div className="flex justify-between"><span className="text-white/75">Fecha y hora:</span><span className="font-bold">{formatFechaHora(confirmAcceso.fecha_hora)}</span></div>
+            </div>
+            {!permitido && (
+              <p className="mt-4 max-w-xs text-xs leading-relaxed text-white/90">
+                Tu credencial no está vigente. Acude a <b>Servicios Escolares</b> para regularizar tu situación.
+              </p>
+            )}
+            <button
+              onClick={() => setConfirmAcceso(null)}
+              className={`mt-8 w-full max-w-xs rounded-xl bg-white py-3 font-bold shadow-lg ${permitido ? 'text-verde' : 'text-rojo'}`}
+            >
+              Entendido
+            </button>
           </div>
-          <h2 className="mt-6 text-2xl font-black tracking-wide">ENTRADA REGISTRADA</h2>
-          <p className="mt-1 text-sm font-semibold text-white/90">Bienvenido, {usuario.nombre} 👋</p>
-          <div className="mt-6 w-full max-w-xs space-y-2 rounded-2xl bg-white/15 p-4 text-left text-sm">
-            <div className="flex justify-between"><span className="text-white/75">Punto:</span><span className="font-bold">{confirmAcceso.punto_nombre}</span></div>
-            <div className="flex justify-between"><span className="text-white/75">Fecha y hora:</span><span className="font-bold">{formatFechaHora(confirmAcceso.fecha_hora)}</span></div>
-          </div>
-          <button
-            onClick={() => setConfirmAcceso(null)}
-            className="mt-8 w-full max-w-xs rounded-xl bg-white py-3 font-bold text-verde shadow-lg"
-          >
-            Listo
-          </button>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Modal: mostrar el QR grande para escanear en el punto de acceso */}
       {mostrarQR && (

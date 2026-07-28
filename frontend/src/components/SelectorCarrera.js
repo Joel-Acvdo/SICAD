@@ -19,7 +19,21 @@ import { CARRERAS_UPA } from '@/lib/carreras';
 
 const OTRA = '__otra__';
 
-export default function SelectorCarrera({ value = '', onChange, existentes = [], className = '' }) {
+// Mensaje de error opcional: pinta el control en rojo y lo muestra debajo.
+function TextoError({ error }) {
+  if (!error) return null;
+  return (
+    <span className="mt-1 flex items-start gap-1 text-xs font-medium text-rojo">
+      <svg className="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path strokeLinecap="round" d="M12 8v4m0 4h.01" />
+      </svg>
+      {error}
+    </span>
+  );
+}
+
+export default function SelectorCarrera({ value = '', onChange, existentes = [], className = '', error }) {
   // Catálogo + las ya registradas, sin duplicados y ordenadas.
   const opciones = Array.from(new Set([...CARRERAS_UPA, ...existentes.filter(Boolean)])).sort((a, b) =>
     a.localeCompare(b, 'es')
@@ -37,7 +51,9 @@ export default function SelectorCarrera({ value = '', onChange, existentes = [],
             onChange={(e) => onChange(e.target.value)}
             placeholder="Escribe la carrera o área nueva"
             autoFocus
-            className="w-full rounded-xl border border-platino bg-white px-3 py-2.5 text-sm outline-none transition focus:border-azulmedio"
+            className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition ${
+              error ? 'border-rojo bg-red-50 focus:border-rojo' : 'border-platino bg-white focus:border-azulmedio'
+            }`}
           />
           <button
             type="button"
@@ -48,6 +64,7 @@ export default function SelectorCarrera({ value = '', onChange, existentes = [],
             Lista
           </button>
         </div>
+        <TextoError error={error} />
         <p className="mt-1 text-[10px] text-slate-400">Al guardar, aparecerá en la lista para los siguientes registros.</p>
       </label>
     );
@@ -62,14 +79,17 @@ export default function SelectorCarrera({ value = '', onChange, existentes = [],
           if (e.target.value === OTRA) { setLibre(true); onChange(''); }
           else onChange(e.target.value);
         }}
-        className="w-full rounded-xl border border-platino bg-white px-3 py-2.5 text-sm outline-none transition focus:border-azulmedio"
+        className={`w-full rounded-xl border px-3 py-2.5 text-sm outline-none transition ${
+          error ? 'border-rojo bg-red-50 focus:border-rojo' : 'border-platino bg-white focus:border-azulmedio'
+        }`}
       >
-        <option value="">— Sin especificar —</option>
+        <option value="">— Selecciona una carrera o área —</option>
         {opciones.map((c) => (
           <option key={c} value={c}>{c}</option>
         ))}
         <option value={OTRA}>➕ Agregar otra…</option>
       </select>
+      <TextoError error={error} />
     </label>
   );
 }
