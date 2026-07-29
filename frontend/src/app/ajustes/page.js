@@ -3,21 +3,20 @@
 // ============================================================================
 // /ajustes — Ajustes del PROPIO usuario (comunidad).
 //   1) Cambiar su contraseña (pide la actual; la nueva debe ser fuerte).
-//   2) Reportar la credencial como perdida (si ya está revocada, se deshabilita
-//      y se indica que la reactivación es en Servicios Escolares).
+//   2) Ver el estado de su credencial (solo informativo). El alumno NO puede
+//      revocarla: los trámites de pérdida o reactivación son presenciales.
 // ============================================================================
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
 import { logout } from '@/store/authSlice';
-import { cargarMiCredencial, reportarPerdida } from '@/store/accessSlice';
+import { cargarMiCredencial } from '@/store/accessSlice';
 import api from '@/lib/api';
 import TopBar from '@/components/TopBar';
 import Badge from '@/components/Badge';
-import Modal from '@/components/Modal';
 import Campo from '@/components/Campo';
 import FotoPersona from '@/components/FotoPersona';
-import { nombreCompleto } from '@/lib/format';
+import { nombreCompleto, formatVigencia } from '@/lib/format';
 
 export default function Ajustes() {
   const router = useRouter();
@@ -32,7 +31,6 @@ export default function Ajustes() {
   const [guardando, setGuardando] = useState(false);
   const [mensaje, setMensaje] = useState(null); // { tipo: 'ok'|'error', texto }
 
-  const [modalPerdida, setModalPerdida] = useState(false);
 
   useEffect(() => {
     dispatch(cargarMiCredencial());
@@ -43,7 +41,7 @@ export default function Ajustes() {
 
   if (!usuario) return null;
 
-  const revocada = miCredencial?.estado === 'REVOCADA';
+  const activa = miCredencial?.estado === 'ACTIVA';
 
   const cambiarPassword = async (e) => {
     e.preventDefault();
@@ -62,11 +60,6 @@ export default function Ajustes() {
     } finally {
       setGuardando(false);
     }
-  };
-
-  const confirmarPerdida = () => {
-    dispatch(reportarPerdida());
-    setModalPerdida(false);
   };
 
   return (
@@ -113,9 +106,11 @@ export default function Ajustes() {
           </button>
         </form>
 
-        {/* 2) Reportar pérdida de la credencial */}
+        {/* 2) Estado de la credencial (solo informativo).
+            El alumno NO puede revocar su propia credencial: cualquier trámite
+            (pérdida, robo, reactivación) se hace en Servicios Escolares. */}
         <div className="mt-6 rounded-2xl border border-platino-light bg-white p-6 shadow-sm">
-          <div className="mb-1 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-black text-marino">Mi credencial</h2>
             {miCredencial && (
               <Badge tono={miCredencial.estado === 'ACTIVA' ? 'verde' : miCredencial.estado === 'REVOCADA' ? 'rojo' : 'neutro'}>
@@ -124,46 +119,28 @@ export default function Ajustes() {
             )}
           </div>
 
-          {revocada ? (
-            <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-rojo">
-              Tu credencial ya está <b>revocada</b>. Para reactivarla, acude a <b>Servicios Escolares</b>:
-              ahí pueden reemitirla con un código nuevo.
-            </p>
+          {activa ? (
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-500">Vigente hasta</span>
+                <span className="font-bold text-marino">{formatVigencia(miCredencial.fecha_vencimiento)}</span>
+              </div>
+              <p className="pt-2 text-xs text-slate-500">
+                Si la extravías o crees que alguien más la está usando, acude a <b>Servicios Escolares</b>
+                para que la den de baja y te emitan una nueva.
+              </p>
+            </div>
           ) : (
-            <p className="mb-4 text-xs text-slate-500">
-              Si perdiste tu credencial o crees que alguien más la tiene, repórtala: se revoca de inmediato.
-            </p>
+            <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-rojo">
+              <p className="font-bold">Tu credencial no está activa</p>
+              <p className="mt-1">
+                No podrás ingresar al campus. Acude a <b>Servicios Escolares</b> para conocer el motivo
+                y solicitar su reactivación.
+              </p>
+            </div>
           )}
-
-          <button
-            onClick={() => setModalPerdida(true)}
-            disabled={revocada}
-            className="mt-2 w-full rounded-xl border border-platino bg-white py-3 text-sm font-bold text-rojo transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Reportar pérdida
-          </button>
         </div>
       </main>
-
-      {modalPerdida && (
-        <Modal onClose={() => setModalPerdida(false)}>
-          <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-rojo">
-              <svg className="h-8 w-8" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86l-8.48 14.7A2 2 0 003.53 21h16.94a2 2 0 001.72-2.44L13.71 3.86a2 2 0 00-3.42 0z" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-black text-marino">¿Reportar tu credencial como perdida?</h3>
-            <p className="mt-2 text-sm text-slate-500">
-              Se <b>revocará de inmediato</b> y para reactivarla tendrás que acudir a <b>Servicios Escolares</b>.
-            </p>
-            <div className="mt-6 flex w-full gap-3">
-              <button onClick={() => setModalPerdida(false)} className="flex-1 rounded-xl border border-platino bg-white py-3 text-sm font-bold text-marino hover:bg-platino-light">Cancelar</button>
-              <button onClick={confirmarPerdida} className="flex-1 rounded-xl bg-rojo py-3 text-sm font-bold text-white hover:opacity-90">Sí, reportar</button>
-            </div>
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

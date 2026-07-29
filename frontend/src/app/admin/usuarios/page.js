@@ -51,6 +51,8 @@ export default function GestionUsuarios() {
   }
 
   const credDe = (id) => credenciales.find((c) => c.id_usuario === id);
+  // Una credencial revocada NO se renueva: hay que reemitirla (código QR nuevo).
+  const revocadaDe = (u) => u.estatus !== 'ACTIVO' || credDe(u.id_usuario)?.estado === 'REVOCADA';
   // La vigencia depende del usuario Y de su credencial: si el alumno reportó la
   // suya como perdida, la credencial queda REVOCADA aunque él siga activo, y
   // eso debe verse aquí (antes seguía mostrando la fecha como si nada).
@@ -198,7 +200,7 @@ export default function GestionUsuarios() {
                     <td className="px-5 py-3">
                       <div className="flex justify-end gap-1.5">
                         <BotonIcono onClick={() => router.push(`/admin/usuarios/${u.id_usuario}`)} titulo="Editar" bg="bg-platino-light" color="text-slate-600"><IcoEditar className="h-4 w-4" /></BotonIcono>
-                        <BotonIcono onClick={() => { setRenovarMeses(12); setModal({ tipo: 'renovar', usuario: u }); }} titulo="Renovar" bg="bg-blue-50" color="text-azulmedio"><IcoRenovar className="h-4 w-4" /></BotonIcono>
+                        <BotonIcono onClick={() => { setRenovarMeses(12); setModal({ tipo: 'renovar', usuario: u }); }} titulo={revocadaDe(u) ? 'Credencial revocada: hay que reemitirla, no renovarla' : 'Renovar'} disabled={revocadaDe(u)} bg="bg-blue-50" color="text-azulmedio"><IcoRenovar className="h-4 w-4" /></BotonIcono>
                         {activo ? (
                           <BotonIcono onClick={() => setModal({ tipo: 'revocar', usuario: u })} titulo="Revocar" bg="bg-red-50" color="text-rojo"><IcoX className="h-4 w-4" /></BotonIcono>
                         ) : (
@@ -231,7 +233,7 @@ export default function GestionUsuarios() {
                 <p className={`mt-2 text-xs font-semibold ${vig.rojo ? 'text-rojo' : 'text-slate-500'}`}>Vigencia: {vig.txt}</p>
                 <div className="mt-3 grid grid-cols-3 gap-2">
                   <BtnMovil onClick={() => router.push(`/admin/usuarios/${u.id_usuario}`)} bg="bg-platino-light" color="text-marino"><IcoEditar className="h-4 w-4" /> Editar</BtnMovil>
-                  <BtnMovil onClick={() => { setRenovarMeses(12); setModal({ tipo: 'renovar', usuario: u }); }} bg="bg-blue-50" color="text-azulmedio"><IcoRenovar className="h-4 w-4" /> Renovar</BtnMovil>
+                  <BtnMovil onClick={() => { setRenovarMeses(12); setModal({ tipo: 'renovar', usuario: u }); }} disabled={revocadaDe(u)} bg="bg-blue-50" color="text-azulmedio"><IcoRenovar className="h-4 w-4" /> Renovar</BtnMovil>
                   {activo ? (
                     <BtnMovil onClick={() => setModal({ tipo: 'revocar', usuario: u })} bg="bg-red-50" color="text-rojo"><IcoX className="h-4 w-4" /> Revocar</BtnMovil>
                   ) : (
@@ -381,16 +383,25 @@ export default function GestionUsuarios() {
   );
 }
 
-function BotonIcono({ children, onClick, titulo, bg, color }) {
+function BotonIcono({ children, onClick, titulo, bg, color, disabled }) {
   return (
-    <button onClick={onClick} title={titulo} className={`rounded-lg ${bg} ${color} p-2 transition hover:opacity-80`}>
+    <button
+      onClick={onClick}
+      title={titulo}
+      disabled={disabled}
+      className={`rounded-lg ${bg} ${color} p-2 transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:opacity-40`}
+    >
       {children}
     </button>
   );
 }
-function BtnMovil({ children, onClick, bg, color }) {
+function BtnMovil({ children, onClick, bg, color, disabled }) {
   return (
-    <button onClick={onClick} className={`flex items-center justify-center gap-1 rounded-lg ${bg} ${color} py-2 text-[11px] font-bold transition hover:opacity-80`}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`flex items-center justify-center gap-1 rounded-lg ${bg} ${color} py-2 text-[11px] font-bold transition hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:opacity-40`}
+    >
       {children}
     </button>
   );

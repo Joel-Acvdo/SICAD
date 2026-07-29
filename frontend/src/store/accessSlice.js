@@ -25,18 +25,6 @@ export const cargarMiCredencial = createAsyncThunk(
   }
 );
 
-export const reportarPerdida = createAsyncThunk(
-  'access/reportarPerdida',
-  async (_, { rejectWithValue }) => {
-    try {
-      const { data } = await api.patch('/credenciales/mia/perdida');
-      return data.credencial;
-    } catch (err) {
-      return rejectWithValue(err.response?.data?.error || 'No se pudo reportar la pérdida.');
-    }
-  }
-);
-
 // --- Flujo de ADMIN / CASETA ----------------------------------------------
 // cargarAccesosYCredenciales: listados completos (credenciales, bitácora y visitantes).
 export const cargarAccesosYCredenciales = createAsyncThunk(
@@ -156,9 +144,6 @@ const accessSlice = createSlice({
       .addCase(cargarMiCredencial.rejected, (s) => {
         s.cargandoMia = false;
         s.inicializado = true;
-      })
-      .addCase(reportarPerdida.fulfilled, (s, a) => {
-        s.miCredencial = a.payload;
       })
       // Admin / Caseta
       .addCase(cargarAccesosYCredenciales.fulfilled, (s, a) => {
