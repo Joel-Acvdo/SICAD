@@ -20,6 +20,13 @@ async function renovarVigencia(id_usuario, { meses, fecha_vencimiento }) {
   const cred = await prisma.credencial.findFirst({ where: { id_usuario } });
   if (!cred) throw ApiError.notFound('El usuario no tiene credencial');
 
+  // Una credencial revocada no se renueva: extender su vigencia no la
+  // reactivaría y dejaría un dato engañoso. El camino correcto es REEMITIRLA
+  // (código QR nuevo), que además invalida el anterior.
+  if (cred.estado === 'REVOCADA') {
+    throw ApiError.badRequest('La credencial está revocada: no se puede renovar, hay que reemitirla');
+  }
+
   let vence;
   if (fecha_vencimiento) {
     vence = new Date(fecha_vencimiento);
@@ -44,15 +51,9 @@ async function renovarVigencia(id_usuario, { meses, fecha_vencimiento }) {
   });
 }
 
-// El usuario reporta SU credencial como perdida → se revoca de inmediato.
-async function reportarPerdida(id_usuario) {
-  const cred = await prisma.credencial.findFirst({ where: { id_usuario } });
-  if (!cred) throw ApiError.notFound('No tienes una credencial asignada');
-  return prisma.credencial.update({
-    where: { id_credencial: cred.id_credencial },
-    data: { estado: 'REVOCADA' },
-  });
-}
+// Nota: el usuario NO puede revocar su propia credencial desde la app. Los
+// trámites de pérdida, robo o reactivación se hacen en Servicios Escolares,
+// que revoca (cambiando el estatus del usuario) o reemite la credencial.
 
 // El código nuevo también es opaco (no lleva la matrícula) — ver utils/codigoQr.js.
 
@@ -83,4 +84,4 @@ async function reemitir(id_usuario) {
   });
 }
 
-module.exports = { listar, miCredencial, renovarVigencia, reportarPerdida, reemitir };
+module.exports = { listar, miCredencial, renovarVigencia, reemitir };
