@@ -32,6 +32,11 @@ function candidatos() {
   }
   // "backend" solo resuelve dentro de la red de Docker (todo en una máquina).
   lista.push({ url: `http://backend:${PUERTO_BACKEND}`, etiqueta: 'servicio backend de Docker' });
+  // HTTPS por el nombre DNS (Nginx del backend en 443). Preferido cuando hay
+  // TLS; Node valida la cadena con NODE_EXTRA_CA_CERTS=ca.crt. Debe ir por
+  // NOMBRE, no por IP (el certificado es para backend.fandite.com).
+  lista.push({ url: `https://${DNS_BACKEND}`, etiqueta: `DNS ${DNS_BACKEND} (HTTPS)` });
+  // Fallbacks en HTTP plano (dev / sin TLS).
   lista.push({ url: `http://${DNS_BACKEND}:${PUERTO_BACKEND}`, etiqueta: `DNS ${DNS_BACKEND}` });
   lista.push({ url: `http://${IP_BACKEND}:${PUERTO_BACKEND}`, etiqueta: `IP fija ${IP_BACKEND} (Familia 4)` });
   lista.push({ url: `http://localhost:${PUERTO_BACKEND}`, etiqueta: 'localhost' });

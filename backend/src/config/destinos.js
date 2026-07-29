@@ -26,6 +26,11 @@ const PASSWORD_BD = process.env.POSTGRES_PASSWORD || 'sicad_pass';
 const NOMBRE_BD = process.env.POSTGRES_DB || 'sicad';
 const TIMEOUT_MS = Number(process.env.RESOLVE_TIMEOUT_MS || 1500);
 
+// SSL hacia Postgres. DB_SSL=on exige conexión cifrada; con la raíz (ca.crt)
+// Prisma valida la cadena del servidor. Vacío/off en dev (todo en una máquina).
+const DB_SSL = /^(on|true|1|require|verify-ca|verify-full)$/i.test(process.env.DB_SSL || '');
+const DB_CA_FILE = process.env.DB_CA_FILE || '/app/cert/ca.crt';
+
 // ¿Hay algo escuchando en host:puerto? (prueba TCP con timeout)
 function responde(host, puerto, timeout = TIMEOUT_MS) {
   return new Promise((resolve) => {
@@ -47,7 +52,12 @@ function responde(host, puerto, timeout = TIMEOUT_MS) {
 
 // Arma la cadena de conexión de Postgres para un host dado.
 function urlDe(host) {
-  return `postgresql://${USUARIO_BD}:${PASSWORD_BD}@${host}:${PUERTO_BD}/${NOMBRE_BD}?schema=public`;
+  let url = `postgresql://${USUARIO_BD}:${PASSWORD_BD}@${host}:${PUERTO_BD}/${NOMBRE_BD}?schema=public`;
+  if (DB_SSL) {
+    // sslmode=require cifra siempre; con sslrootcert Prisma valida la cadena.
+    url += `&sslmode=require&sslrootcert=${encodeURIComponent(DB_CA_FILE)}`;
+  }
+  return url;
 }
 
 // Resuelve la URL de la base de datos siguiendo la cascada descrita arriba.

@@ -1,3 +1,8 @@
+# Scripts de shell: SIEMPRE con fin de línea LF, aunque core.autocrlf=true.
+# Sin esto, en Windows git los convierte a CRLF y rompe el entrypoint de la BD
+# ("set: illegal option -"). Aplica a todos los equipos al clonar.
+*.sh    text eol=lf
+
 # Binarios: git NO debe aplicar conversión de fin de línea (podría corromperlos).
 *.pdf   binary
 *.png   binary

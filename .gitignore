@@ -42,6 +42,15 @@ desktop.ini
 # Docker
 *.pid
 
+# Certificados TLS (NUNCA subir llaves privadas ni certificados al repo).
+# Se reparten a cada laptop por un canal privado; ca.crt es público pero se
+# distribuye igual aparte. Ver WORKFLOW-TLS.md.
+cert/*.key
+cert/*.cer
+cert/*.crt
+cert/*.csr
+cert/*.bak
+
 # OneDrive
 *.tmp
 

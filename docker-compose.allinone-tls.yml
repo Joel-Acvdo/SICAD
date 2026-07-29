@@ -1,0 +1,35 @@
+# ============================================================================
+# PRUEBA TLS COMPLETA EN UN SOLO HOST
+#
+# Levanta los 5 servicios (db + backend + backend-proxy + frontend +
+# frontend-proxy) con TLS de extremo a extremo, en una sola máquina.
+#
+# Los dos proxies no pueden compartir 80/443, así que aquí SOLO el
+# frontend-proxy se publica al host (para el navegador). El backend-proxy queda
+# accesible por la red interna de Docker: el frontend lo alcanza por su alias
+# "backend.fandite.com", sin puerto de host.
+#
+#   1. Agrega a  C:\Windows\System32\drivers\etc\hosts  (como Administrador):
+#          127.0.0.1   sicad.fandite.com
+#   2. Arranca:
+#          docker compose -f docker-compose.yml -f docker-compose.allinone-tls.yml --profile tls up -d --build
+#   3. Abre:  https://sicad.fandite.com   (con ca.crt instalado como raíz)
+#   4. Apaga: docker compose -f docker-compose.yml -f docker-compose.allinone-tls.yml --profile tls down
+# ============================================================================
+services:
+  frontend:
+    environment:
+      # El frontend habla al backend por HTTPS (mismo host, red interna).
+      BACKEND_URL: https://backend.fandite.com
+    # El 80 lo ocupa el frontend-proxy; el contenedor de Next va al 3000.
+    ports: !override
+      - "3000:3000"
+
+  backend:
+    environment:
+      # Exige conexión cifrada a Postgres (que enciende SSL solo, con sus certs).
+      DB_SSL: "on"
+
+  backend-proxy:
+    # Sin puertos de host: solo se usa por la red interna (alias backend.fandite.com).
+    ports: !override []
