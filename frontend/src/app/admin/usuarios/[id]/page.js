@@ -12,7 +12,7 @@ import Badge from '@/components/Badge';
 import SelectorCarrera from '@/components/SelectorCarrera';
 import { validarFormularioUsuario } from '@/lib/validacionUsuario';
 import { comprimirImagen } from '@/lib/imagen';
-import { formatVigencia } from '@/lib/format';
+import { formatVigencia, hoyISO, maximoISO } from '@/lib/format';
 
 const tipos = ['ALUMNO', 'DOCENTE', 'ADMINISTRATIVO', 'SEGURIDAD'];
 // Etiqueta visible de cada tipo (SEGURIDAD se muestra como "Caseta").
@@ -273,16 +273,26 @@ export default function EditarUsuario() {
               <p className="text-sm font-black text-marino">Vigencia de la tarjeta</p>
               <p className="mb-3 text-xs text-slate-500">Vence el <span className="font-bold text-marino">{formatVigencia(cred.fecha_vencimiento)}</span></p>
 
-              <div className="mb-3 flex gap-2">
-                <button type="button" onClick={() => aplicarVigencia({ meses: 6 }, 'Vigencia renovada +6 meses.')} className="flex-1 rounded-xl bg-platino-light py-2 text-xs font-bold text-marino transition hover:bg-platino">+6 meses</button>
-                <button type="button" onClick={() => aplicarVigencia({ meses: 12 }, 'Vigencia renovada +12 meses.')} className="flex-1 rounded-xl bg-platino-light py-2 text-xs font-bold text-marino transition hover:bg-platino">+12 meses</button>
-              </div>
+              {/* Una credencial revocada no se renueva: el camino es reemitirla. */}
+              {cred.estado === 'REVOCADA' ? (
+                <p className="rounded-xl bg-red-50 px-3 py-3 text-xs font-medium text-rojo">
+                  Esta credencial está <b>revocada</b>, por eso no se puede renovar.
+                  Usa <b>Reemitir credencial</b> (abajo) para darle un código nuevo y reactivarla.
+                </p>
+              ) : (
+                <>
+                  <div className="mb-3 flex gap-2">
+                    <button type="button" onClick={() => aplicarVigencia({ meses: 6 }, 'Vigencia renovada +6 meses.')} className="flex-1 rounded-xl bg-platino-light py-2 text-xs font-bold text-marino transition hover:bg-platino">+6 meses</button>
+                    <button type="button" onClick={() => aplicarVigencia({ meses: 12 }, 'Vigencia renovada +12 meses.')} className="flex-1 rounded-xl bg-platino-light py-2 text-xs font-bold text-marino transition hover:bg-platino">+12 meses</button>
+                  </div>
 
-              <label className="mb-1 block text-xs font-bold text-marino">O fija una fecha exacta</label>
-              <div className="flex gap-2">
-                <input type="date" value={nuevaFecha} onChange={(e) => setNuevaFecha(e.target.value)} className="flex-1 rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none transition focus:border-azulmedio" />
-                <button type="button" disabled={!nuevaFecha} onClick={() => { aplicarVigencia({ fecha_vencimiento: nuevaFecha }, 'Vigencia actualizada.'); setNuevaFecha(''); }} className="rounded-xl bg-azulmedio px-4 py-2 text-xs font-bold text-white transition hover:bg-marino disabled:opacity-50">Aplicar</button>
-              </div>
+                  <label className="mb-1 block text-xs font-bold text-marino">O fija una fecha exacta</label>
+                  <div className="flex gap-2">
+                    <input type="date" value={nuevaFecha} min={hoyISO()} max={maximoISO()} onChange={(e) => setNuevaFecha(e.target.value)} className="flex-1 rounded-xl border border-platino bg-white px-3 py-2 text-sm outline-none transition focus:border-azulmedio" />
+                    <button type="button" disabled={!nuevaFecha} onClick={() => { aplicarVigencia({ fecha_vencimiento: nuevaFecha }, 'Vigencia actualizada.'); setNuevaFecha(''); }} className="rounded-xl bg-azulmedio px-4 py-2 text-xs font-bold text-white transition hover:bg-marino disabled:opacity-50">Aplicar</button>
+                  </div>
+                </>
+              )}
 
               {avisoVig && <p className="mt-3 rounded-lg bg-green-100 px-3 py-2 text-xs font-bold text-verde">{avisoVig}</p>}
             </div>
