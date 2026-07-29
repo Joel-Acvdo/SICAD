@@ -55,6 +55,9 @@ services:
       # gráficas se calculan en hora de México, no en UTC.
       TZ: ${TZ:-America/Mexico_City}
     ports:
+      # El 4000 es el puerto que busca el frontend por defecto (ver
+      # frontend/src/lib/backendDestino.js). Si lo cambias aquí, hay que
+      # avisarle al frontend con BACKEND_URL en su .env.
       - "4000:4000"
     # Resuelve la BD, migra, siembra y arranca (ver backend/scripts/iniciar.js).
     command: node scripts/iniciar.js
